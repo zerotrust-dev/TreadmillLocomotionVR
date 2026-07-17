@@ -73,6 +73,7 @@ namespace
     }
 
     void PublishSample(
+        const char* source,
         std::uint32_t userIndex,
         std::uint32_t result,
         const XInputState* state)
@@ -81,13 +82,15 @@ namespace
         if (!settings.Enabled() || !settings.Telemetry()) {
             return;
         }
-        if (userIndex != settings.UserIndex() || !state) {
+        if ((!settings.LogAllUsers() && userIndex != settings.UserIndex()) ||
+            !state) {
             return;
         }
 
         TLV::XInputTelemetrySample sample{};
         sample.sequence = g_sequence.fetch_add(1, std::memory_order_relaxed) + 1;
         sample.tickMs = GetTickCount64();
+        sample.source = source;
         sample.userIndex = userIndex;
         sample.result = result;
         sample.packetNumber = state->packetNumber;
@@ -121,7 +124,7 @@ namespace
         const auto result = g_realNamedGetState ?
             g_realNamedGetState(userIndex, state) :
             static_cast<std::uint32_t>(ERROR_DEVICE_NOT_CONNECTED);
-        PublishSample(userIndex, result, state);
+        PublishSample("XInputGetState", userIndex, result, state);
         return result;
     }
 
@@ -132,7 +135,7 @@ namespace
         const auto result = g_realOrdinal100GetState ?
             g_realOrdinal100GetState(userIndex, state) :
             static_cast<std::uint32_t>(ERROR_DEVICE_NOT_CONNECTED);
-        PublishSample(userIndex, result, state);
+        PublishSample("XInputGetStateEx", userIndex, result, state);
         return result;
     }
 

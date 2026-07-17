@@ -8,6 +8,7 @@ namespace TLV
     {
         std::uint64_t sequence{ 0 };
         std::uint64_t tickMs{ 0 };
+        const char* source{ "unknown" };
         std::uint32_t userIndex{ 0 };
         std::uint32_t result{ 0 };
         std::uint32_t packetNumber{ 0 };

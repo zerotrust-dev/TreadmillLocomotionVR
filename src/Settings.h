@@ -16,6 +16,7 @@ namespace TLV
         [[nodiscard]] bool DebugLogging() const;
         [[nodiscard]] bool PatchXInput() const;
         [[nodiscard]] bool LogOnly() const;
+        [[nodiscard]] bool LogAllUsers() const;
         [[nodiscard]] std::uint32_t UserIndex() const;
         [[nodiscard]] const AnalysisSettings& Analysis() const;
 
@@ -25,6 +26,7 @@ namespace TLV
         bool debugLogging_{ false };
         bool patchXInput_{ true };
         bool logOnly_{ true };
+        bool logAllUsers_{ true };
         std::uint32_t userIndex_{ 0 };
         AnalysisSettings analysis_{};
     };

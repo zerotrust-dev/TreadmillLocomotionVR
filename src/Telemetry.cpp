@@ -33,7 +33,7 @@ namespace TLV
         }
 
         stream_
-            << "sequence,time_s,tick_ms,user_index,result,packet_number,"
+            << "sequence,time_s,tick_ms,source,user_index,result,packet_number,"
             << "buttons,left_trigger,right_trigger,"
             << "thumb_lx,thumb_ly,thumb_rx,thumb_ry,"
             << "norm_lx,norm_ly,norm_rx,norm_ry,forward_band\n";
@@ -64,6 +64,7 @@ namespace TLV
             << sample.sequence << ','
             << timeSeconds << ','
             << sample.tickMs << ','
+            << sample.source << ','
             << sample.userIndex << ','
             << sample.result << ','
             << sample.packetNumber << ','

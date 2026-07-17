@@ -57,6 +57,7 @@ namespace TLV
         debugLogging_ = ReadBool(ini, "General", "DebugLogging", debugLogging_);
         patchXInput_ = ReadBool(ini, "Probe", "PatchXInput", patchXInput_);
         logOnly_ = ReadBool(ini, "Probe", "LogOnly", logOnly_);
+        logAllUsers_ = ReadBool(ini, "Probe", "LogAllUsers", logAllUsers_);
         userIndex_ = std::min<std::uint32_t>(
             3,
             ReadUInt(ini, "Probe", "UserIndex", userIndex_));
@@ -79,12 +80,13 @@ namespace TLV
             1.0F);
 
         logger::info(
-            "{} settings loaded: enabled={} telemetry={} patchXInput={} logOnly={} userIndex={}",
+            "{} settings loaded: enabled={} telemetry={} patchXInput={} logOnly={} logAllUsers={} userIndex={}",
             Version::name,
             enabled_,
             telemetry_,
             patchXInput_,
             logOnly_,
+            logAllUsers_,
             userIndex_);
     }
 
@@ -93,6 +95,7 @@ namespace TLV
     bool Settings::DebugLogging() const { return debugLogging_; }
     bool Settings::PatchXInput() const { return patchXInput_; }
     bool Settings::LogOnly() const { return logOnly_; }
+    bool Settings::LogAllUsers() const { return logAllUsers_; }
     std::uint32_t Settings::UserIndex() const { return userIndex_; }
     const AnalysisSettings& Settings::Analysis() const { return analysis_; }
 }
