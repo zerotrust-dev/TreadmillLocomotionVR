@@ -1,5 +1,7 @@
 build/
 staging/
+tools/**/bin/
+tools/**/obj/
 *.user
 *.log
 *.csv
