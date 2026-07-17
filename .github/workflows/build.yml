@@ -14,9 +14,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  VCPKG_CACHE_KEY: vcpkg-windows-2022-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
-
 jobs:
   build:
     runs-on: windows-2022
@@ -42,7 +39,7 @@ jobs:
           path: |
             build/release-vr/vcpkg_installed
             ${{ runner.temp }}/vcpkg/downloads
-          key: ${{ env.VCPKG_CACHE_KEY }}
+          key: vcpkg-windows-2022-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
           restore-keys: |
             vcpkg-windows-2022-
 
@@ -56,7 +53,7 @@ jobs:
           path: |
             build/release-vr/vcpkg_installed
             ${{ runner.temp }}/vcpkg/downloads
-          key: ${{ env.VCPKG_CACHE_KEY }}
+          key: vcpkg-windows-2022-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
 
       - name: Build
         run: cmake --build --preset release-vr --parallel

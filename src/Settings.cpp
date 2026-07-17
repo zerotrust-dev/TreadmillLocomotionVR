@@ -31,7 +31,7 @@ namespace
         std::uint32_t fallback)
     {
         return static_cast<std::uint32_t>(
-            (std::max)<long>(0, ini.GetLongValue(section, key, fallback)));
+            (std::max)(0L, ini.GetLongValue(section, key, fallback)));
     }
 }
 
@@ -58,8 +58,8 @@ namespace TLV
         patchXInput_ = ReadBool(ini, "Probe", "PatchXInput", patchXInput_);
         logOnly_ = ReadBool(ini, "Probe", "LogOnly", logOnly_);
         logAllUsers_ = ReadBool(ini, "Probe", "LogAllUsers", logAllUsers_);
-        userIndex_ = (std::min)<std::uint32_t>(
-            3,
+        userIndex_ = (std::min)(
+            3U,
             ReadUInt(ini, "Probe", "UserIndex", userIndex_));
 
         analysis_.deadzone = std::clamp(
