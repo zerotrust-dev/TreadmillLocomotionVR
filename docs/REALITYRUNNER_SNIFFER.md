@@ -69,3 +69,28 @@ With RealityRunner idle:
 Use endpoint-specific captures when we need source attribution. A single ZMQ
 subscriber connected to multiple endpoints can capture all messages, but it
 does not identify which endpoint produced each message.
+
+## First Treadmill Capture
+
+Capture:
+`captures/rr-zmq-treadmill-test.csv`
+
+Observed:
+
+- 10,590 messages over 164.3 seconds.
+- Mean frame interval: 15.52 ms.
+- Normal interval range: 15-16 ms, with rare 13-18 ms intervals.
+- Every message had one 508-byte frame.
+- Overall byte entropy was effectively 8 bits/byte.
+- Every byte offset used all 256 possible byte values.
+- Consecutive frames changed almost every byte.
+- No plausible low-range integer, counter, joystick, pulse, or float field was
+  found by simple offset scans.
+
+Interpretation:
+
+The `52237` ZMQ stream is real and active, but the payload is not practical
+plaintext telemetry. Treat it as encrypted, compressed, or otherwise opaque
+until proven otherwise. For raw treadmill pulses, the next better target is the
+COM4 serial protocol or a serial proxy between the RealityRunner hardware and
+companion app.
