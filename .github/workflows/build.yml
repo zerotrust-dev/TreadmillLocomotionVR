@@ -14,6 +14,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  VCPKG_CACHE_KEY: vcpkg-windows-2022-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+
 jobs:
   build:
     runs-on: windows-2022
@@ -32,16 +35,28 @@ jobs:
           .\bootstrap-vcpkg.bat -disableMetrics
           "VCPKG_ROOT=$env:RUNNER_TEMP\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Cache built dependencies
-        uses: actions/cache@v5
+      - name: Restore built dependencies
+        id: restore-vcpkg-cache
+        uses: actions/cache/restore@v5
         with:
           path: |
             build/release-vr/vcpkg_installed
             ${{ runner.temp }}/vcpkg/downloads
-          key: vcpkg-windows-2022-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          key: ${{ env.VCPKG_CACHE_KEY }}
+          restore-keys: |
+            vcpkg-windows-2022-
 
       - name: Configure
         run: cmake --preset release-vr -DBUILD_TESTING=ON
+
+      - name: Save built dependencies
+        if: steps.restore-vcpkg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            build/release-vr/vcpkg_installed
+            ${{ runner.temp }}/vcpkg/downloads
+          key: ${{ env.VCPKG_CACHE_KEY }}
 
       - name: Build
         run: cmake --build --preset release-vr --parallel
