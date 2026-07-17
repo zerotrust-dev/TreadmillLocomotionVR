@@ -3,6 +3,8 @@ staging/
 .research/
 tools/**/bin/
 tools/**/obj/
+__pycache__/
+*.pyc
 *.user
 *.log
 *.csv
