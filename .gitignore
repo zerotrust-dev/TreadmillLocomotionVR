@@ -1,5 +1,6 @@
 build/
 staging/
+.research/
 tools/**/bin/
 tools/**/obj/
 *.user
