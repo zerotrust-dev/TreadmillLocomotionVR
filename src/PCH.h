@@ -22,4 +22,6 @@
 #include <string>
 #include <string_view>
 
+using namespace std::literals;
+
 namespace logger = SKSE::log;

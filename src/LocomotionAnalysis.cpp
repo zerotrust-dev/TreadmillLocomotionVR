@@ -7,7 +7,7 @@ namespace TLV
 {
     float NormalizeStick(std::int16_t value)
     {
-        if (value == std::numeric_limits<std::int16_t>::min()) {
+        if (value == (std::numeric_limits<std::int16_t>::min)()) {
             return -1.0F;
         }
         return static_cast<float>(value) / 32767.0F;
@@ -17,7 +17,7 @@ namespace TLV
         float normalizedY,
         const AnalysisSettings& settings)
     {
-        const auto forward = std::max(0.0F, normalizedY);
+        const auto forward = (std::max)(0.0F, normalizedY);
         if (forward < settings.deadzone) {
             return LocomotionBand::idle;
         }
