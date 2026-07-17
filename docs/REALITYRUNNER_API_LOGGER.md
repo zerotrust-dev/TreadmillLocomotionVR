@@ -53,3 +53,8 @@ Move the treadmill during the capture. The CSV contains:
 This API exposes curve/profile settings and live joystick output. It may still
 be after RealityRunner device-side processing, so do not assume it is raw magnet
 pulse data until tested against known wheel movement.
+
+The logger asserts DTR and RTS by default because serial libraries differ here:
+the official Python demo uses pyserial, while this PowerShell tool uses .NET
+`SerialPort`. If the device opens but does not answer `GET curve`, try verifying
+with the official Python demo from the community API repository.

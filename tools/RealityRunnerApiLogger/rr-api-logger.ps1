@@ -4,6 +4,9 @@ param(
     [int]$Seconds = 60,
     [int]$PollMs = 100,
     [string]$Out = "",
+    [bool]$DtrEnable = $true,
+    [bool]$RtsEnable = $true,
+    [int]$ResponseTimeoutMs = 5000,
     [switch]$AllowRealityRunnerRunning
 )
 
@@ -14,6 +17,9 @@ if ($Seconds -le 0) {
 }
 if ($PollMs -le 0) {
     throw "PollMs must be positive."
+}
+if ($ResponseTimeoutMs -le 0) {
+    throw "ResponseTimeoutMs must be positive."
 }
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
@@ -59,7 +65,7 @@ function Read-Exact([System.IO.Ports.SerialPort]$Port, [int]$Count, [datetime]$D
     return $buffer
 }
 
-function Read-RrFrame([System.IO.Ports.SerialPort]$Port, [int]$TimeoutMs = 2000) {
+function Read-RrFrame([System.IO.Ports.SerialPort]$Port, [int]$TimeoutMs) {
     $deadline = [datetime]::UtcNow.AddMilliseconds($TimeoutMs)
     $headerBytes = Read-Exact $Port 4 $deadline
     $header = [System.Text.Encoding]::ASCII.GetString($headerBytes)
@@ -84,11 +90,11 @@ function Read-RrFrame([System.IO.Ports.SerialPort]$Port, [int]$TimeoutMs = 2000)
     return [System.Text.Encoding]::UTF8.GetString($payloadBytes)
 }
 
-function Send-RrCommand([System.IO.Ports.SerialPort]$Port, [string]$Command) {
+function Send-RrCommand([System.IO.Ports.SerialPort]$Port, [string]$Command, [int]$TimeoutMs) {
     $Port.DiscardInBuffer()
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($Command)
     $Port.Write($bytes, 0, $bytes.Length)
-    return Read-RrFrame $Port
+    return Read-RrFrame $Port $TimeoutMs
 }
 
 function Parse-Joystick([string]$Payload) {
@@ -105,6 +111,8 @@ function Parse-Joystick([string]$Payload) {
 $port = [System.IO.Ports.SerialPort]::new($PortName, $BaudRate, [System.IO.Ports.Parity]::None, 8, [System.IO.Ports.StopBits]::One)
 $port.ReadTimeout = 100
 $port.WriteTimeout = 1000
+$port.DtrEnable = $DtrEnable
+$port.RtsEnable = $RtsEnable
 
 $writer = $null
 try {
@@ -114,15 +122,17 @@ try {
     Write-Host "  Seconds: $Seconds"
     Write-Host "  Poll:    $PollMs ms"
     Write-Host "  Output:  $Out"
+    Write-Host "  DTR/RTS: $DtrEnable/$RtsEnable"
+    Write-Host "  Timeout: $ResponseTimeoutMs ms"
     Write-Host ""
 
     $port.Open()
-    Start-Sleep -Milliseconds 250
+    Start-Sleep -Milliseconds 500
     $port.DiscardInBuffer()
 
-    $curve = Send-RrCommand $port "GET curve`n"
-    $profile = Send-RrCommand $port "GET profiles`n"
-    $bootMode = Send-RrCommand $port "GET bootmode`n"
+    $curve = Send-RrCommand $port "GET curve`n" $ResponseTimeoutMs
+    $profile = Send-RrCommand $port "GET profiles`n" $ResponseTimeoutMs
+    $bootMode = Send-RrCommand $port "GET bootmode`n" $ResponseTimeoutMs
 
     Write-Host "Curve:    $curve"
     Write-Host "Profile:  $profile"
@@ -138,7 +148,7 @@ try {
     $sampleIndex = 0
 
     while ([datetime]::UtcNow -lt $deadline) {
-        $payload = Send-RrCommand $port "SET stream true,WIRED`n"
+        $payload = Send-RrCommand $port "SET stream true,WIRED`n" $ResponseTimeoutMs
         $data = Parse-Joystick $payload
         ++$sampleIndex
 
@@ -154,7 +164,7 @@ try {
         Start-Sleep -Milliseconds $PollMs
     }
 
-    Send-RrCommand $port "SET stream false,WIRED`n" | Out-Null
+    Send-RrCommand $port "SET stream false,WIRED`n" $ResponseTimeoutMs | Out-Null
     Write-Host ""
     Write-Host "Done. Captured $sampleIndex sample(s)."
 } finally {
