@@ -82,6 +82,58 @@ Therefore:
   than only re-deriving sprint from `joystickValue` — then apply our own
   hysteresis on top for stability.
 
+## Empirical Findings (from `captures/rr-api-test.csv`, 1068 samples)
+
+These numbers are the basis for the tuning defaults below. Re-derive them if the
+curve or profile changes.
+
+**Sign convention — forward is negative.** Every non-zero sample is negative
+(range `-18334` … `-30495`, mean `-7970`, max `0`). XInput expects *positive*
+`sThumbLY` for forward, so a sign flip is required, on top of honoring the
+curve's `invertYaxis`. Getting this backwards produces a mod that walks the
+player backwards.
+
+**Stream rate ~16 Hz** (62 ms median interval, min 47 / max 63). The game
+renders at 72–120 Hz, so the contribution must be *held* between samples. Writing
+it from the game frame hook does this naturally.
+
+**Dropouts are a minor problem.** Zero-run histogram: two short runs of 62 ms and
+124 ms, and three long runs of 3.7 s / 10.6 s / 29.9 s. The long runs are genuine
+"not walking"; sustained movement was a single unbroken 341-sample (~21 s) burst.
+So `CoastMaxSeconds = 0.25` comfortably covers real dropouts.
+
+**The likely cause of the in-game choppiness is magnitude oscillation, not
+dropouts.** During continuous walking the value swings between `-18334` and
+`-30495` — 56% to 93% of full scale — 16 times a second. Skyrim's walk-vs-run
+split is driven by stick *magnitude*, so a value oscillating across that
+threshold makes the player flicker between walking and running. This is the
+strongest argument for emitting a **fixed magnitude per state**: the win is not
+smoothing dropouts, it is stopping the walk/run oscillation.
+
+**The device's sprint flag chatters and needs hysteresis.** `sprint_active` fired
+on 215/1068 samples across 10 transitions. During ramp-up it produced four
+spurious blips of 62–124 ms before the genuine 12.96 s sprint (which was itself
+clean). Observed sprint at `-22561` against `sprintThreshold=22301` confirms the
+device derives sprint from magnitude ≥ threshold.
+
+Consequences:
+
+- On `Toggle` sprint mode those four blips would each flip sprint on/off,
+  leaving it in an unpredictable state. Our mod should implement **hold**
+  semantics itself regardless of the device's configured mode.
+- Requiring ~200–250 ms of continuous `sprintActive` to enter Sprinting rejects
+  all four blips (each ≤124 ms) and would have produced one clean sprint from
+  this capture instead of five events.
+
+Derived defaults:
+
+```ini
+CoastMaxSeconds=0.25
+StaleTimeoutMs=450
+SprintEnterSeconds=0.22
+SprintExitSeconds=0.35
+```
+
 ## Proposed Runtime Design
 
 ```text
@@ -193,15 +245,40 @@ mods use, reading the thread-safe snapshot. This matters for three reasons:
 
 #### Output Semantics
 
-**[correction] "left grip" is a VR-controller binding, not an XInput concept.**
-We inject through the XInput path (a synthetic gamepad), so we cannot press a VR
-grip. Sprint must be whatever **XInput button** Skyrim VR maps to Sprint. The
-strong candidate is `XINPUT_GAMEPAD_LEFT_THUMB` (L3 / left-stick click, Skyrim's
-default gamepad sprint), carried in the mux `buttons` field — but per this
-project's standing rule, **prove it with logs before relying on it**; MGO and
-VRIK rebinds can change it. Note the device's curve also has its own
-`sprintButton`/`sprintmode`, which describes what the *desktop app* would have
-sent — useful evidence, not automatically what we should send.
+**[resolved] Sprint goes through a synthetic button, and this is confirmed
+working.** Two facts settle it:
+
+1. Per the vendor's sensor-calibration tutorial, RealityRunner sprint is
+   **automatic and speed-threshold driven** — the device reaches the threshold
+   and the desktop app presses a configured Sprint Button. Sprint Mode options
+   are `None` ("does nothing"), `Hold` ("press and hold the Sprint Button"), and
+   `Toggle` ("press the SprintButton once whenever the Sprint threshold is
+   reached").
+2. User-confirmed behavior: on the treadmill with the RR desktop app running,
+   **sprinting happens automatically with no grip squeeze**. That proves the
+   app's Sprint Button already reaches Skyrim's Sprint action in this MGO/VRIK
+   profile without any VR-controller input.
+
+So sprint is reproducible by pressing a button in the mux `buttons` field. The
+user's separate "left grip while pushing the thumbstick" is a parallel VRIK/MGO
+binding for manual play; it is unaffected by this mod and keeps working.
+
+**This makes sprint parity, not polish.** We take over COM4, so the desktop app
+must be closed and its automatic sprint disappears with it. If we emit only the
+forward stick, the user *loses* automatic sprinting versus their current setup.
+
+Remaining unknown is only *which* button. Two cheap routes, in order:
+
+- Read `sprintButton` from `GET curve` and map the integer via the desktop app's
+  Sprint Button dropdown (the tutorial does not enumerate the button list).
+- Or simply test `XINPUT_GAMEPAD_LEFT_THUMB` (L3 / left-stick click) first — it
+  is Skyrim's default gamepad Sprint, and the working automatic sprint proves a
+  synthetic button reaches the action. Per this project's standing rule, prove it
+  with logs rather than assuming.
+
+Implement **hold** semantics ourselves — hold the button while the debounced
+sprint state is active — regardless of the device's configured `sprintmode`.
+Copying `Toggle` would inherit the chatter problem documented above.
 
 **[correction] Skyrim's gamepad locomotion has three tiers, not two.** Walk vs
 run is driven by *stick magnitude*; sprint is a separate button. So expose:
@@ -276,10 +353,12 @@ explicitly, because it changes the output math:
 The mux/coexistence and serial questions are resolved above. What genuinely
 remains:
 
-- Which XInput button does this MGO/VRIK profile actually read as Sprint?
-  (Determine by logging before wiring it.)
+- Which specific button index does `sprintButton` hold, and which XInput button
+  does it correspond to? (Sprint via synthetic button is proven; only the
+  identity is open — see Output Semantics.)
 - Does Skyrim VR's walk/run magnitude split behave the same under MGO as in flat
-  Skyrim, and where is its threshold? This sets `WalkStickMagnitude`.
+  Skyrim, and where is its threshold? This sets `WalkStickMagnitude`, and the
+  captured 56%–93% oscillation suggests the threshold sits inside that band.
 - Does the treadmill expose a second joystick path to Windows (see Environment
   Interaction)?
 - How should the state machine treat reverse/backward, given the curve's
