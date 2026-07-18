@@ -17,7 +17,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 75
 
     steps:
       - name: Check out source
@@ -61,8 +61,109 @@ jobs:
       - name: Test locomotion analysis
         run: ctest --test-dir build/release-vr -C Release --output-on-failure
 
+      - name: Cache Papyrus compiler
+        id: cache-caprica
+        uses: actions/cache@v5
+        with:
+          path: tools/caprica-cache
+          key: caprica-windows-2022-v1-orvid-master-pugixml-target
+
+      - name: Use cached Papyrus compiler
+        if: steps.cache-caprica.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: |
+          $caprica = "tools/caprica-cache/Caprica.exe"
+          if (-not (Test-Path -LiteralPath $caprica)) {
+            throw "Caprica cache was restored but Caprica.exe is missing"
+          }
+          "CAPRICA_EXE=$caprica" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Using cached Papyrus compiler: $caprica"
+
+      - name: Build Papyrus compiler for MCM
+        if: steps.cache-caprica.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/Orvid/Caprica.git "$env:RUNNER_TEMP\Caprica"
+          $capricaCMake = "$env:RUNNER_TEMP\Caprica\CMakeLists.txt"
+          (Get-Content -LiteralPath $capricaCMake -Raw).
+            Replace('pugixml pugixml::static pugixml::pugixml', 'pugixml::pugixml') |
+            Set-Content -LiteralPath $capricaCMake
+          cmake `
+            -S "$env:RUNNER_TEMP\Caprica" `
+            -B "$env:RUNNER_TEMP\Caprica-build" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DCAPRICA_USE_STATIC_RUNTIME=ON
+          cmake --build "$env:RUNNER_TEMP\Caprica-build" --config Release --target Caprica
+          $caprica = Get-ChildItem -LiteralPath "$env:RUNNER_TEMP\Caprica-build" -Recurse -Filter Caprica.exe |
+            Sort-Object FullName |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $caprica) {
+            throw "Caprica.exe was not produced"
+          }
+          New-Item -ItemType Directory -Force -Path tools/caprica-cache | Out-Null
+          Get-ChildItem -LiteralPath (Split-Path -Parent $caprica) |
+            Copy-Item -Destination tools/caprica-cache -Recurse -Force
+          $cachedCaprica = "tools/caprica-cache/Caprica.exe"
+          if (-not (Test-Path -LiteralPath $cachedCaprica)) {
+            throw "Caprica.exe was not copied into the cache directory"
+          }
+          "CAPRICA_EXE=$cachedCaprica" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Built and cached Papyrus compiler: $cachedCaprica"
+
       - name: Stage MO2 package
         run: cmake --install build/release-vr --config Release --prefix staging/TreadmillLocomotionVR
+
+      - name: Build visible MCM assets
+        shell: pwsh
+        run: |
+          dotnet restore tools/McmPluginBuilder/McmPluginBuilder.csproj
+          dotnet run --project tools/McmPluginBuilder/McmPluginBuilder.csproj -- staging/TreadmillLocomotionVR/TreadmillLocomotionVR_MCM.esp
+
+          New-Item -ItemType Directory -Force -Path staging/TreadmillLocomotionVR/Scripts | Out-Null
+          $papyrusOut = "build/papyrus-output"
+          New-Item -ItemType Directory -Force -Path $papyrusOut | Out-Null
+          $papyrusOut = (Resolve-Path -LiteralPath $papyrusOut).Path
+          $capricaExe = (Resolve-Path -LiteralPath $env:CAPRICA_EXE).Path
+
+          Push-Location mcm/Scripts/Source
+          & $capricaExe `
+            --game skyrim `
+            --flags TESV_Papyrus_Flags `
+            --output $papyrusOut `
+            --import . `
+            --import Stubs `
+            TreadmillLocomotionVR.psc
+          & $capricaExe `
+            --game skyrim `
+            --flags TESV_Papyrus_Flags `
+            --output $papyrusOut `
+            --import . `
+            --import Stubs `
+            TreadmillLocomotionVR_MCM.psc
+          Pop-Location
+
+          $pexFiles = @(Get-ChildItem -LiteralPath $papyrusOut -Recurse -Filter *.pex)
+          if ($pexFiles.Count -lt 2) {
+            Write-Host "Papyrus output directory contents:"
+            Get-ChildItem -LiteralPath $papyrusOut -Recurse | Select-Object FullName,Length
+            Write-Host "Searching source tree for misplaced PEX files:"
+            Get-ChildItem -LiteralPath mcm/Scripts/Source -Recurse -Filter *.pex -ErrorAction SilentlyContinue |
+              Select-Object FullName,Length
+            throw "Expected Papyrus compiler to produce two PEX files, found $($pexFiles.Count)"
+          }
+          $pexFiles | Copy-Item -Destination staging/TreadmillLocomotionVR/Scripts -Force
+
+          foreach ($required in @("TreadmillLocomotionVR.pex", "TreadmillLocomotionVR_MCM.pex")) {
+            $path = Join-Path "staging/TreadmillLocomotionVR/Scripts" $required
+            if (-not (Test-Path -LiteralPath $path)) {
+              Get-ChildItem -LiteralPath staging/TreadmillLocomotionVR/Scripts -Recurse | Select-Object FullName,Length
+              throw "Missing required MCM script: $required"
+            }
+          }
+
+          Get-ChildItem -LiteralPath staging/TreadmillLocomotionVR -Recurse |
+            Where-Object { $_.Name -match 'TreadmillLocomotionVR.*\.(esp|pex)$' } |
+            Select-Object FullName,Length
 
       - name: Upload MO2-ready artifact
         uses: actions/upload-artifact@v5
