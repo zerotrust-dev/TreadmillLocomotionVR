@@ -78,6 +78,7 @@ namespace TLV
 
         enabled_ = ReadBool(ini, "General", "Enabled", enabled_);
         telemetry_ = ReadBool(ini, "General", "Telemetry", telemetry_);
+        pauseInMenus_ = ReadBool(ini, "Safety", "PauseInMenus", pauseInMenus_);
         debugLogging_ = ReadBool(ini, "General", "DebugLogging", debugLogging_);
         patchXInput_ = ReadBool(ini, "Probe", "PatchXInput", patchXInput_);
         logOnly_ = ReadBool(ini, "Probe", "LogOnly", logOnly_);
@@ -168,6 +169,7 @@ namespace TLV
 
         WriteBool(ini, "General", "Enabled", enabled_);
         WriteBool(ini, "General", "Telemetry", telemetry_);
+        WriteBool(ini, "Safety", "PauseInMenus", pauseInMenus_);
         WriteBool(ini, "General", "DebugLogging", debugLogging_);
 
         WriteBool(ini, "RealityRunner", "DirectApiEnabled", directApiEnabled_);
@@ -199,6 +201,9 @@ namespace TLV
     {
         if (name == "Enabled") {
             return enabled_;
+        }
+        if (name == "PauseInMenus") {
+            return pauseInMenus_;
         }
         if (name == "Telemetry") {
             return telemetry_;
@@ -248,6 +253,10 @@ namespace TLV
     {
         if (name == "Enabled") {
             enabled_ = value;
+            return true;
+        }
+        if (name == "PauseInMenus") {
+            pauseInMenus_ = value;
             return true;
         }
         if (name == "Telemetry") {
@@ -312,6 +321,7 @@ namespace TLV
 
     bool Settings::Enabled() const { return enabled_; }
     bool Settings::Telemetry() const { return telemetry_; }
+    bool Settings::PauseInMenus() const { return pauseInMenus_; }
     bool Settings::DebugLogging() const { return debugLogging_; }
     bool Settings::PatchXInput() const { return patchXInput_; }
     bool Settings::LogOnly() const { return logOnly_; }

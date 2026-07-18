@@ -392,26 +392,61 @@ namespace TLV
             logger::warn("RealityRunner boot mode read failed");
         }
 
-        const auto pollMs = Settings::GetSingleton().ApiPollMs();
-        logger::info(
-            "RealityRunner joystick polling started intervalMs={}",
-            pollMs);
-        while (!stopRequested_.load(std::memory_order_relaxed)) {
-            const auto payload =
-                SendCommand(handle.value, "SET stream true,WIRED\n", stopRequested_);
-            if (!payload) {
-                if (!stopRequested_.load(std::memory_order_relaxed)) {
-                    logger::warn("RealityRunner joystick poll failed; stopping reader");
-                }
-                break;
+        // `SET stream true,WIRED` is a one-shot enable: the device then pushes
+        // joystick frames continuously. Re-sending it per iteration would purge
+        // the receive buffer (SendCommand starts with PURGE_RXCLEAR) and throw
+        // away every frame pushed since the last poll, adding latency and
+        // discarding data. Enable it once, then only read.
+        //
+        // ReadFrame blocks inside ReadExact until a frame arrives or a stop is
+        // requested, so the loop is paced by the device itself and needs no
+        // sleep. A silent device simply blocks here, publishes nothing, and the
+        // consumer's staleness watchdog falls back to stopped.
+        const auto streamAck =
+            SendCommand(handle.value, "SET stream true,WIRED\n", stopRequested_);
+        if (!streamAck) {
+            if (!stopRequested_.load(std::memory_order_relaxed)) {
+                logger::error("RealityRunner stream enable failed; stopping reader");
             }
+            running_.store(false, std::memory_order_relaxed);
+            MarkDisconnected();
+            return;
+        }
+        logger::info("RealityRunner joystick stream enabled");
+
+        // The reply to the enable may already be the first joystick frame.
+        if (const auto firstFrame = ParseJoystick(*streamAck); firstFrame) {
+            Publish(firstFrame->first, firstFrame->second, *streamAck);
+        }
+
+        // ReadFrame returns nullopt only on a read error or a framing fault
+        // (both of which resync by purging), never on mere silence. A run of
+        // them means the link is unusable, so give up rather than spin.
+        constexpr std::uint32_t maximumConsecutiveFrameFaults = 50;
+        std::uint32_t consecutiveFrameFaults = 0;
+        while (!stopRequested_.load(std::memory_order_relaxed)) {
+            const auto payload = ReadFrame(handle.value, stopRequested_);
+            if (!payload) {
+                if (stopRequested_.load(std::memory_order_relaxed)) {
+                    break;
+                }
+                if (++consecutiveFrameFaults >= maximumConsecutiveFrameFaults) {
+                    logger::warn(
+                        "RealityRunner stream hit {} consecutive frame faults; "
+                        "stopping reader",
+                        consecutiveFrameFaults);
+                    break;
+                }
+                continue;
+            }
+            consecutiveFrameFaults = 0;
+
             const auto joystick = ParseJoystick(*payload);
             if (!joystick) {
-                logger::debug("Ignoring non-joystick poll payload: {}", *payload);
+                logger::debug("Ignoring non-joystick stream payload: {}", *payload);
                 continue;
             }
             Publish(joystick->first, joystick->second, *payload);
-            Sleep(pollMs);
         }
 
         (void)SendCommand(handle.value, "SET stream false,WIRED\n", stopRequested_);

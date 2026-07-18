@@ -106,6 +106,23 @@ namespace TLV
             return;
         }
 
+        // Release everything while the game is paused. Without this, walking on
+        // the treadmill with a menu open injects left-stick forward and LB into
+        // the menu itself: the stick navigates lists and LB/RB switch inventory
+        // tabs, so the belt would scroll and re-categorise the player's
+        // inventory. Reset the intent so movement is re-derived on resume
+        // rather than resuming mid-state.
+        if (settings.PauseInMenus()) {
+            const auto ui = RE::UI::GetSingleton();
+            if (ui && ui->GameIsPaused()) {
+                XInputLocomotionOutput::GetSingleton().SetLocomotion(0, 0);
+                LocomotionIntent::GetSingleton().Reset("paused");
+                runCancelSecondsRemaining_ = 0.0;
+                lastIntentState_ = IntentState::stopped;
+                return;
+            }
+        }
+
         const auto snapshot = RealityRunnerApiClient::GetSingleton().Latest();
         const auto curve = RealityRunnerApiClient::GetSingleton().Curve();
         auto output = LocomotionIntent::GetSingleton().Update(
