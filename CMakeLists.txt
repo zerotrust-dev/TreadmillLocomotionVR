@@ -26,6 +26,8 @@ target_sources(
         src/main.cpp
         src/GameIntegration.cpp
         src/GameIntegration.h
+        src/InputMux.cpp
+        src/InputMux.h
         src/IntentTelemetry.cpp
         src/IntentTelemetry.h
         src/LocomotionAnalysis.cpp
@@ -39,6 +41,8 @@ target_sources(
         src/Telemetry.cpp
         src/Telemetry.h
         src/Version.h
+        src/XInputLocomotionOutput.cpp
+        src/XInputLocomotionOutput.h
         src/XInputTelemetryProbe.cpp
         src/XInputTelemetryProbe.h
         src/PCH.h

@@ -4,6 +4,7 @@
 #include "LocomotionIntent.h"
 #include "RealityRunnerApiClient.h"
 #include "Settings.h"
+#include "XInputLocomotionOutput.h"
 
 namespace TLV
 {
@@ -38,6 +39,15 @@ namespace TLV
             return false;
         }
 
+        if (Settings::GetSingleton().EnableOutput()) {
+            const auto outputReady =
+                XInputLocomotionOutput::GetSingleton().Initialize();
+            if (!outputReady) {
+                logger::warn(
+                    "Treadmill XInput output requested but no output path is ready");
+            }
+        }
+
         initialized_ = true;
         logger::info("Treadmill player update hook installed");
         return true;
@@ -45,6 +55,9 @@ namespace TLV
 
     void GameIntegration::Shutdown()
     {
+        XInputLocomotionOutput::GetSingleton().SetLocomotion(0, 0);
+        XInputLocomotionOutput::GetSingleton().Shutdown();
+
         if (initialized_) {
             // Vtable hook restoration is intentionally left to process shutdown,
             // matching the sibling SKSE plugins' pattern.
@@ -63,6 +76,7 @@ namespace TLV
     {
         const auto& settings = Settings::GetSingleton();
         if (!settings.Enabled() || !settings.DirectApiEnabled()) {
+            XInputLocomotionOutput::GetSingleton().SetLocomotion(0, 0);
             return;
         }
 
@@ -94,12 +108,21 @@ namespace TLV
         }
 
         if (settings.EnableOutput()) {
-            static std::atomic<bool> warned{ false };
-            if (!warned.exchange(true, std::memory_order_relaxed)) {
-                logger::warn(
-                    "EnableOutput=true requested, but this build is logging-only; "
-                    "no XInput contribution was written");
+            auto& outputPath = XInputLocomotionOutput::GetSingleton();
+            if (outputPath.IsOutputPathReady()) {
+                outputPath.SetLocomotion(
+                    output.intendedLeftY,
+                    output.intendedButtons);
+            } else {
+                outputPath.SetLocomotion(0, 0);
+                static std::atomic<bool> warned{ false };
+                if (!warned.exchange(true, std::memory_order_relaxed)) {
+                    logger::warn(
+                        "EnableOutput=true requested, but no XInput output path is ready");
+                }
             }
+        } else {
+            XInputLocomotionOutput::GetSingleton().SetLocomotion(0, 0);
         }
     }
 }
