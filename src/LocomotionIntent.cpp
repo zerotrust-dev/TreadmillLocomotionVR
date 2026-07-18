@@ -12,25 +12,31 @@ namespace
         return static_cast<std::int16_t>(std::clamp<long>(scaled, -32768L, 32767L));
     }
 
+    [[nodiscard]] float JoystickMagnitude(int joystickValue)
+    {
+        const auto magnitude = std::abs(static_cast<long>(joystickValue));
+        return std::clamp(
+            static_cast<float>(magnitude) / 32767.0F,
+            0.0F,
+            1.0F);
+    }
+
     [[nodiscard]] bool IsMoving(
         const TLV::RealityRunnerSnapshot& snapshot,
-        const TLV::RealityRunnerCurve& curve)
+        const TLV::AnalysisSettings& analysis)
     {
-        const auto magnitude = std::abs(snapshot.joystickValue);
-        const auto deadzone = (std::max)(curve.deadzone, 1);
-        return snapshot.connected && magnitude >= deadzone;
+        return snapshot.connected &&
+            JoystickMagnitude(snapshot.joystickValue) >= analysis.deadzone;
     }
 
     [[nodiscard]] bool IsSprinting(
         const TLV::RealityRunnerSnapshot& snapshot,
-        const TLV::RealityRunnerCurve& curve)
+        const TLV::AnalysisSettings& analysis)
     {
         if (!snapshot.connected) {
             return false;
         }
-        const auto magnitude = std::abs(snapshot.joystickValue);
-        const auto threshold = (std::max)(curve.sprintThreshold, 1);
-        return snapshot.sprintActive || magnitude >= threshold;
+        return JoystickMagnitude(snapshot.joystickValue) >= analysis.sprintThreshold;
     }
 }
 
@@ -67,7 +73,7 @@ namespace TLV
 
     IntentOutput LocomotionIntent::Update(
         const RealityRunnerSnapshot& snapshot,
-        const RealityRunnerCurve& curve,
+        const RealityRunnerCurve&,
         float deltaSeconds)
     {
         const auto& settings = Settings::GetSingleton();
@@ -95,8 +101,9 @@ namespace TLV
             sprintPresentSeconds_ = 0.0;
             sprintAbsentSeconds_ = 0.0;
         } else {
-            const auto moving = IsMoving(snapshot, curve);
-            const auto sprinting = IsSprinting(snapshot, curve);
+            const auto& analysis = settings.Analysis();
+            const auto moving = IsMoving(snapshot, analysis);
+            const auto sprinting = IsSprinting(snapshot, analysis);
             if (moving) {
                 noMovementSeconds_ = 0.0;
             } else {
