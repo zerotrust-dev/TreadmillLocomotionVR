@@ -35,6 +35,7 @@ namespace TLV
         [[nodiscard]] std::uint32_t StaleTimeoutMs() const;
         [[nodiscard]] double SprintEnterSeconds() const;
         [[nodiscard]] double SprintExitSeconds() const;
+        [[nodiscard]] double SprintCancelSeconds() const;
 
     private:
         bool enabled_{ false };
@@ -54,5 +55,6 @@ namespace TLV
         std::uint32_t staleTimeoutMs_{ 450 };
         double sprintEnterSeconds_{ 0.22 };
         double sprintExitSeconds_{ 0.35 };
+        double sprintCancelSeconds_{ 0.12 };
     };
 }

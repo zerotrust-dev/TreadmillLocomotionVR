@@ -1,5 +1,7 @@
 #pragma once
 
+#include "LocomotionIntent.h"
+
 namespace TLV
 {
     class GameIntegration
@@ -23,6 +25,8 @@ namespace TLV
         void OnFrame(float deltaSeconds);
 
         REL::Relocation<PlayerUpdate*> originalPlayerUpdate_;
+        IntentState lastIntentState_{ IntentState::stopped };
+        double sprintCancelSecondsRemaining_{ 0.0 };
         bool initialized_{ false };
     };
 }

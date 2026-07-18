@@ -11,6 +11,7 @@ Int _deadzoneOID
 Int _sprintThresholdOID
 Int _sprintEnterOID
 Int _sprintExitOID
+Int _sprintCancelOID
 Int _coastOID
 Int _forwardMagnitudeOID
 Int _directApiOID
@@ -27,6 +28,7 @@ Float _deadzone
 Float _sprintThreshold
 Float _sprintEnter
 Float _sprintExit
+Float _sprintCancel
 Float _coast
 Float _forwardMagnitude
 
@@ -82,6 +84,8 @@ Event OnOptionHighlight(Int option)
 		SetInfoText("How long the sprint signal must be present before sprint starts. Lower reacts faster.")
 	ElseIf option == _sprintExitOID
 		SetInfoText("How long sprint can be absent before returning to walking. Raise if sprint flickers.")
+	ElseIf option == _sprintCancelOID
+		SetInfoText("Briefly releases forward after sprint ends so Skyrim stops sprinting before normal walking resumes.")
 	ElseIf option == _coastOID
 		SetInfoText("How long walking continues over brief missing samples. Raise slightly if movement stutters.")
 	ElseIf option == _forwardMagnitudeOID
@@ -139,6 +143,8 @@ Event OnOptionSliderOpen(Int option)
 		OpenSlider(_sprintEnter, 0.22, 0.00, 0.80, 0.01)
 	ElseIf option == _sprintExitOID
 		OpenSlider(_sprintExit, 0.35, 0.00, 1.00, 0.01)
+	ElseIf option == _sprintCancelOID
+		OpenSlider(_sprintCancel, 0.12, 0.00, 0.50, 0.01)
 	ElseIf option == _coastOID
 		OpenSlider(_coast, 0.25, 0.00, 1.00, 0.01)
 	ElseIf option == _forwardMagnitudeOID
@@ -162,6 +168,10 @@ Event OnOptionSliderAccept(Int option, Float value)
 	ElseIf option == _sprintExitOID
 		_sprintExit = value
 		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", value)
+		SetSliderOptionValue(option, value, "{2} s")
+	ElseIf option == _sprintCancelOID
+		_sprintCancel = value
+		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", value)
 		SetSliderOptionValue(option, value, "{2} s")
 	ElseIf option == _coastOID
 		_coast = value
@@ -192,6 +202,7 @@ Function DrawTuning()
 	_sprintThresholdOID = AddSliderOption("Sprint threshold", _sprintThreshold, "{2}")
 	_sprintEnterOID = AddSliderOption("Sprint start delay", _sprintEnter, "{2} s")
 	_sprintExitOID = AddSliderOption("Sprint release delay", _sprintExit, "{2} s")
+	_sprintCancelOID = AddSliderOption("Sprint cancel pulse", _sprintCancel, "{2} s")
 EndFunction
 
 Function DrawDiagnostics()
@@ -216,6 +227,7 @@ Function LoadSettings()
 	_sprintThreshold = TreadmillLocomotionVR.GetFloatSetting("SprintThreshold")
 	_sprintEnter = TreadmillLocomotionVR.GetFloatSetting("SprintEnterSeconds")
 	_sprintExit = TreadmillLocomotionVR.GetFloatSetting("SprintExitSeconds")
+	_sprintCancel = TreadmillLocomotionVR.GetFloatSetting("SprintCancelSeconds")
 	_coast = TreadmillLocomotionVR.GetFloatSetting("CoastMaxSeconds")
 	_forwardMagnitude = TreadmillLocomotionVR.GetFloatSetting("ForwardMagnitude")
 EndFunction
@@ -238,16 +250,19 @@ Function ApplyPreset(Int preset)
 		TreadmillLocomotionVR.SetFloatSetting("SprintThreshold", 0.60)
 		TreadmillLocomotionVR.SetFloatSetting("SprintEnterSeconds", 0.12)
 		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", 0.45)
+		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", 0.12)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.30)
 	ElseIf preset == 1
 		TreadmillLocomotionVR.SetFloatSetting("SprintThreshold", 0.75)
 		TreadmillLocomotionVR.SetFloatSetting("SprintEnterSeconds", 0.22)
 		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", 0.35)
+		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", 0.12)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.25)
 	ElseIf preset == 2
 		TreadmillLocomotionVR.SetFloatSetting("SprintThreshold", 0.85)
 		TreadmillLocomotionVR.SetFloatSetting("SprintEnterSeconds", 0.25)
 		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", 0.30)
+		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", 0.10)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.20)
 	EndIf
 

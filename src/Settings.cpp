@@ -116,6 +116,10 @@ namespace TLV
             ReadDouble(ini, "Intent", "SprintExitSeconds", sprintExitSeconds_),
             0.0,
             2.0);
+        sprintCancelSeconds_ = std::clamp(
+            ReadDouble(ini, "Intent", "SprintCancelSeconds", sprintCancelSeconds_),
+            0.0,
+            0.50);
         if (coastMaxSeconds_ * 1000.0 >= static_cast<double>(staleTimeoutMs_)) {
             coastMaxSeconds_ =
                 (std::max)(0.0, (static_cast<double>(staleTimeoutMs_) - 50.0) / 1000.0);
@@ -152,7 +156,7 @@ namespace TLV
             userIndex_);
         logger::info(
             "directApi={} comPort={} apiPollMs={} enableOutput={} forwardMagnitude={:.3f} "
-            "coast={:.3f}s stale={}ms sprintEnter={:.3f}s sprintExit={:.3f}s",
+            "coast={:.3f}s stale={}ms sprintEnter={:.3f}s sprintExit={:.3f}s sprintCancel={:.3f}s",
             directApiEnabled_,
             comPort_,
             apiPollMs_,
@@ -161,7 +165,8 @@ namespace TLV
             coastMaxSeconds_,
             staleTimeoutMs_,
             sprintEnterSeconds_,
-            sprintExitSeconds_);
+            sprintExitSeconds_,
+            sprintCancelSeconds_);
     }
 
     bool Settings::Save() const
@@ -184,6 +189,7 @@ namespace TLV
         ini.SetLongValue("Intent", "StaleTimeoutMs", staleTimeoutMs_);
         WriteDouble(ini, "Intent", "SprintEnterSeconds", sprintEnterSeconds_);
         WriteDouble(ini, "Intent", "SprintExitSeconds", sprintExitSeconds_);
+        WriteDouble(ini, "Intent", "SprintCancelSeconds", sprintCancelSeconds_);
 
         WriteFloat(ini, "Analysis", "Deadzone", analysis_.deadzone);
         WriteFloat(ini, "Analysis", "WalkThreshold", analysis_.walkThreshold);
@@ -247,6 +253,9 @@ namespace TLV
         }
         if (name == "SprintExitSeconds") {
             return static_cast<float>(sprintExitSeconds_);
+        }
+        if (name == "SprintCancelSeconds") {
+            return static_cast<float>(sprintCancelSeconds_);
         }
         return 0.0F;
     }
@@ -320,6 +329,10 @@ namespace TLV
             sprintExitSeconds_ = std::clamp<double>(value, 0.0, 2.0);
             return true;
         }
+        if (name == "SprintCancelSeconds") {
+            sprintCancelSeconds_ = std::clamp<double>(value, 0.0, 0.50);
+            return true;
+        }
         return false;
     }
 
@@ -340,4 +353,5 @@ namespace TLV
     std::uint32_t Settings::StaleTimeoutMs() const { return staleTimeoutMs_; }
     double Settings::SprintEnterSeconds() const { return sprintEnterSeconds_; }
     double Settings::SprintExitSeconds() const { return sprintExitSeconds_; }
+    double Settings::SprintCancelSeconds() const { return sprintCancelSeconds_; }
 }

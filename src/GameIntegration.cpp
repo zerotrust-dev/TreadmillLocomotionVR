@@ -66,6 +66,8 @@ namespace TLV
             !settings.DirectApiEnabled() ||
             !settings.EnableOutput()) {
             output.SetLocomotion(0, 0);
+            sprintCancelSecondsRemaining_ = 0.0;
+            lastIntentState_ = IntentState::stopped;
             return true;
         }
 
@@ -99,15 +101,36 @@ namespace TLV
         const auto& settings = Settings::GetSingleton();
         if (!settings.Enabled() || !settings.DirectApiEnabled()) {
             XInputLocomotionOutput::GetSingleton().SetLocomotion(0, 0);
+            sprintCancelSecondsRemaining_ = 0.0;
+            lastIntentState_ = IntentState::stopped;
             return;
         }
 
         const auto snapshot = RealityRunnerApiClient::GetSingleton().Latest();
         const auto curve = RealityRunnerApiClient::GetSingleton().Curve();
-        const auto output = LocomotionIntent::GetSingleton().Update(
+        auto output = LocomotionIntent::GetSingleton().Update(
             snapshot,
             curve,
             deltaSeconds);
+
+        if (lastIntentState_ == IntentState::sprinting &&
+            output.state == IntentState::walking &&
+            settings.SprintCancelSeconds() > 0.0) {
+            sprintCancelSecondsRemaining_ = settings.SprintCancelSeconds();
+        }
+        lastIntentState_ = output.state;
+
+        if (output.state != IntentState::walking) {
+            sprintCancelSecondsRemaining_ = 0.0;
+        } else if (sprintCancelSecondsRemaining_ > 0.0) {
+            output.reason = "sprint-cancel";
+            output.intendedLeftY = 0;
+            output.intendedButtons = 0;
+            sprintCancelSecondsRemaining_ = (std::max)(
+                0.0,
+                sprintCancelSecondsRemaining_ -
+                    static_cast<double>((std::max)(0.0F, deltaSeconds)));
+        }
 
         if (settings.Telemetry()) {
             IntentTelemetry::GetSingleton().Write(output);

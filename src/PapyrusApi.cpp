@@ -69,6 +69,8 @@ namespace
         if (settings.Enabled() && settings.DirectApiEnabled()) {
             TLV::RealityRunnerApiClient::GetSingleton().Start();
             TLV::GameIntegration::GetSingleton().Initialize();
+        } else {
+            TLV::RealityRunnerApiClient::GetSingleton().Stop();
         }
         const auto applied = TLV::GameIntegration::GetSingleton().ApplySettings();
         logger::info("Settings applied through Papyrus API; success={}", applied);
