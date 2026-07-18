@@ -24,13 +24,7 @@ namespace TLV
         if (forward >= settings.sprintThreshold) {
             return LocomotionBand::sprint;
         }
-        if (forward >= settings.runThreshold) {
-            return LocomotionBand::run;
-        }
-        if (forward >= settings.walkThreshold) {
-            return LocomotionBand::walk;
-        }
-        return LocomotionBand::idle;
+        return LocomotionBand::walk;
     }
 
     const char* LocomotionBandName(LocomotionBand band)
@@ -40,8 +34,6 @@ namespace TLV
             return "idle";
         case LocomotionBand::walk:
             return "walk";
-        case LocomotionBand::run:
-            return "run";
         case LocomotionBand::sprint:
             return "sprint";
         default:

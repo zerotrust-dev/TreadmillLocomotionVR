@@ -8,15 +8,12 @@ namespace TLV
     {
         idle,
         walk,
-        run,
         sprint
     };
 
     struct AnalysisSettings
     {
         float deadzone{ 0.08F };
-        float walkThreshold{ 0.18F };
-        float runThreshold{ 0.55F };
         float sprintThreshold{ 0.75F };
     };
 

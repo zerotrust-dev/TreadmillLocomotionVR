@@ -132,14 +132,6 @@ namespace TLV
             ReadFloat(ini, "Analysis", "Deadzone", analysis_.deadzone),
             0.0F,
             0.50F);
-        analysis_.walkThreshold = std::clamp(
-            ReadFloat(ini, "Analysis", "WalkThreshold", analysis_.walkThreshold),
-            analysis_.deadzone,
-            1.0F);
-        analysis_.runThreshold = std::clamp(
-            ReadFloat(ini, "Analysis", "RunThreshold", analysis_.runThreshold),
-            analysis_.walkThreshold,
-            1.0F);
         analysis_.sprintThreshold = std::clamp(
             ReadFloat(ini, "Analysis", "SprintThreshold", analysis_.sprintThreshold),
             analysis_.deadzone,
@@ -192,8 +184,6 @@ namespace TLV
         WriteDouble(ini, "Intent", "SprintCancelSeconds", sprintCancelSeconds_);
 
         WriteFloat(ini, "Analysis", "Deadzone", analysis_.deadzone);
-        WriteFloat(ini, "Analysis", "WalkThreshold", analysis_.walkThreshold);
-        WriteFloat(ini, "Analysis", "RunThreshold", analysis_.runThreshold);
         WriteFloat(ini, "Analysis", "SprintThreshold", analysis_.sprintThreshold);
 
         if (ini.SaveFile(settingsPath) < 0) {
@@ -229,12 +219,6 @@ namespace TLV
     {
         if (name == "Deadzone") {
             return analysis_.deadzone;
-        }
-        if (name == "WalkThreshold") {
-            return analysis_.walkThreshold;
-        }
-        if (name == "RunThreshold") {
-            return analysis_.runThreshold;
         }
         if (name == "SprintThreshold") {
             return analysis_.sprintThreshold;
@@ -289,17 +273,7 @@ namespace TLV
     {
         if (name == "Deadzone") {
             analysis_.deadzone = std::clamp(value, 0.0F, 0.50F);
-            analysis_.walkThreshold = (std::max)(analysis_.walkThreshold, analysis_.deadzone);
-            analysis_.runThreshold = (std::max)(analysis_.runThreshold, analysis_.walkThreshold);
             analysis_.sprintThreshold = (std::max)(analysis_.sprintThreshold, analysis_.deadzone);
-            return true;
-        }
-        if (name == "WalkThreshold") {
-            analysis_.walkThreshold = std::clamp(value, analysis_.deadzone, 1.0F);
-            return true;
-        }
-        if (name == "RunThreshold") {
-            analysis_.runThreshold = std::clamp(value, analysis_.walkThreshold, 1.0F);
             return true;
         }
         if (name == "SprintThreshold") {
