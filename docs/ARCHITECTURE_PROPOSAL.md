@@ -284,14 +284,11 @@ binding for manual play; it is unaffected by this mod and keeps working.
 must be closed and its automatic sprint disappears with it. If we emit only the
 forward stick, the user *loses* automatic sprinting versus their current setup.
 
-Remaining unknown is only *which* button. Two cheap routes, in order:
-
-- Read `sprintButton` from `GET curve` and map the integer via the desktop app's
-  Sprint Button dropdown (the tutorial does not enumerate the button list).
-- Or simply test `XINPUT_GAMEPAD_LEFT_THUMB` (L3 / left-stick click) first — it
-  is Skyrim's default gamepad Sprint, and the working automatic sprint proves a
-  synthetic button reaches the action. Per this project's standing rule, prove it
-  with logs rather than assuming.
+**[resolved] The button is `LB` / `XINPUT_GAMEPAD_LEFT_SHOULDER` (`0x0100`)**,
+observed in `joy.cpl` on the app's virtual pad and proven to drive sprint in this
+MGO/VRIK profile — it is what the working setup uses today. See "The sprint
+button is LB" below for how the app gates it and why we do not copy that gating.
+(Earlier guess of `LEFT_THUMB`/L3 was wrong.)
 
 Implement **hold** semantics ourselves — hold the button while the debounced
 sprint state is active — regardless of the device's configured `sprintmode`.
@@ -396,9 +393,38 @@ Consequences:
   in-VR overlay rather than game input, given the ViGEm evidence — the XInput
   logging experiment will confirm outright.
 
-Still open: **which** button bit. Read it from the app's Sprint Button dropdown,
-from `joy.cpl` (watch the button light while crossing the threshold), or from the
-`wButtons` capture in `EXPERIMENT_PLAN.md`.
+### The sprint button is LB — and how the app gates it
+
+Observed directly in `joy.cpl` against the app's virtual pad: **only button 5
+lights up — `LB` / `XINPUT_GAMEPAD_LEFT_SHOULDER` (`0x0100`)** — and the Y axis
+climbs smoothly with treadmill speed.
+
+The surprise is that **LB is held down the entire time the user is moving**, not
+only above the sprint threshold. So the app does not use the button as the
+sprint trigger; it holds the button permanently and lets the *Y magnitude* gate
+whether Skyrim actually engages sprint.
+
+That works because Skyrim's sprint requires **both** a sprint input and
+sufficient forward movement. The full picture, reconciling treadmill behavior
+with the user's manual play:
+
+| Situation | Forward | Sprint button | Result |
+| --- | --- | --- | --- |
+| Manual thumbstick | full | released | walk |
+| Manual thumbstick + grip | full | held | sprint |
+| Treadmill, slow | low Y | LB held | walk (sprint blocked by weak input) |
+| Treadmill, fast | high Y | LB held | sprint |
+
+**Decisive consequence:** manual play proves that *full* forward with no sprint
+input still yields a walk. Therefore magnitude alone never causes running, and
+we do not need to reproduce the app's magnitude gating. We control the button
+directly, so we can be explicit rather than rely on that workaround:
+
+- `Walking` -> full forward, sprint button **released**
+- `Sprinting` -> full forward, sprint button **held**
+
+This is why the single `ForwardMagnitude` in Output Semantics is correct and why
+the walk/run magnitude threshold question is genuinely moot for this design.
 
 Related behavior worth remembering: HeadDirectedTurning only fakes slot-0
 presence when no pad is connected. So *today*, with the RR app running, HDT is
@@ -423,9 +449,11 @@ different paths.
 The mux/coexistence and serial questions are resolved above. What genuinely
 remains:
 
-- Which specific button index does `sprintButton` hold, and which XInput button
-  does it correspond to? (Sprint via synthetic button is proven; only the
-  identity is open — see Output Semantics.)
+- ~~Which XInput button is sprint?~~ **Answered:** `LB` /
+  `XINPUT_GAMEPAD_LEFT_SHOULDER` (`0x0100`), observed on the app's virtual pad.
+- Is Skyrim's non-sprint gait at full forward the pace the user wants for
+  treadmill walking? Manual play says yes (full stick alone = walk), but confirm
+  on the first output build.
 - ~~Where does Skyrim VR's walk/run magnitude threshold sit?~~ **Moot.** The
   two-state design always emits full forward, so magnitude behavior cannot
   affect us. (Optional curiosity: which choppiness hypothesis was correct — see
