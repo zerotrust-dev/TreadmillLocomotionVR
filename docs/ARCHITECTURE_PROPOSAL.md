@@ -356,22 +356,55 @@ keeps running in-game while standing still on the treadmill. Fail-safe rules:
 - **Zero on game state**: menus, loading screens, dialogue, paused.
 - Prefer releasing movement over holding it in every ambiguous case.
 
-## Environment Interaction To Verify
+## How The Desktop App Reaches The Game (answered)
 
-The draft assumed closing the desktop app is sufficient. Worth confirming
-explicitly, because it changes the output math:
+**The RealityRunner desktop app creates a virtual Xbox 360 controller via
+ViGEm.** Evidence from the local install and machine:
 
-- Does the RealityRunner present **any** joystick to Windows independently of
-  its desktop app (HID gamepad, vJoy, or ViGEm virtual pad)? VID/PID
-  `1717:0202` looks like a plain USB CDC serial device, which suggests the
-  desktop app is what synthesizes the joystick — so closing it should remove
-  that input. **Verify it.** If a real or virtual pad is still present, Skyrim
-  receives the choppy signal directly and our smoothed contribution is *summed*
-  on top of it, which is exactly the double-input problem we are trying to
-  remove.
-- Related: HeadDirectedTurning's hook only fakes slot-0 presence when no real
-  pad is connected. If some other pad is connected, contributions add to that
-  pad's real values rather than to zero.
+- `C:\Program Files\RealityRunner\third-party-licences\vigembus_LICENCE.txt` and
+  `vigemclient_LICENCE.txt` — the app bundles and uses ViGEmBus/ViGEmClient.
+- `Nefarius Virtual Gamepad Emulation Bus` is installed and healthy on this
+  machine, alongside phantom `Xbox 360 Controller for Windows` device entries
+  (registered, not present while the app is closed).
+- User-confirmed behavior: treadmill walking moves the character and crossing
+  the sprint threshold makes them run, with **no thumbstick and no grip
+  pressed** — i.e. something else is pressing them.
+
+So the existing chain is:
+
+```text
+magnets -> serial (joystickValue, sprintActive)
+  -> RealityRunner.exe
+  -> ViGEmBus virtual Xbox 360 pad
+  -> left stick Y = curve-mapped speed; sprint button held when sprintActive
+  -> Skyrim VR reads it as an ordinary gamepad
+```
+
+Consequences:
+
+- **Sprint is an XInput button.** It is replicable by us through the mux
+  `buttons` field. The VR-controller scenario that would have broken the sprint
+  design is ruled out.
+- **This mod replaces a driver-based virtual pad with an in-process XInput
+  hook** — same channel Skyrim already reads (HeadDirectedTurning proved it in
+  this Pimax/OpenComposite setup), minus the ViGEmBus dependency and the
+  external app.
+- **No double-input problem.** The virtual pad belongs to the *app*, not the
+  device; VID/PID `1717:0202` is a plain USB CDC serial endpoint. Closing the
+  app to take COM4 removes the pad with it.
+- Note the app also ships `openvr_api.dll`. Most likely HMD detection or an
+  in-VR overlay rather than game input, given the ViGEm evidence — the XInput
+  logging experiment will confirm outright.
+
+Still open: **which** button bit. Read it from the app's Sprint Button dropdown,
+from `joy.cpl` (watch the button light while crossing the threshold), or from the
+`wButtons` capture in `EXPERIMENT_PLAN.md`.
+
+Related behavior worth remembering: HeadDirectedTurning only fakes slot-0
+presence when no pad is connected. So *today*, with the RR app running, HDT is
+injecting turn onto the RR virtual pad's real state; once this mod replaces the
+app, no pad exists and the mux owner fakes one instead. Both work, but they are
+different paths.
 
 ## Safety Defaults
 
@@ -397,8 +430,9 @@ remains:
   two-state design always emits full forward, so magnitude behavior cannot
   affect us. (Optional curiosity: which choppiness hypothesis was correct — see
   Empirical Findings. Not a blocker.)
-- Does the treadmill expose a second joystick path to Windows (see Environment
-  Interaction)?
+- ~~Does the treadmill expose a second joystick path to Windows?~~ **Answered:**
+  the virtual pad is created by the desktop app via ViGEm, not by the device, so
+  closing the app removes it. See "How The Desktop App Reaches The Game".
 - How should the state machine treat reverse/backward, given the curve's
   `reverseMode`? V1 can ignore it; worth a decision before V2.
 
