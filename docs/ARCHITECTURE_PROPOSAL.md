@@ -12,11 +12,58 @@ Build a single Skyrim VR SKSE mod that lets the player use the RealityRunner
 treadmill without running the RealityRunner desktop app or any companion app
 from us.
 
-The mod should translate treadmill movement into stable Skyrim locomotion:
+## Mental Model — Read This First
+
+If you read nothing else, read this. It is the whole design in one place, and
+several of the points below reverse assumptions made earlier in this document's
+history.
+
+**1. The treadmill becomes a sensor. The mod becomes the player's thumb and
+grip.** We open COM4 purely to read speed and decide one thing: are we below or
+above the sprint threshold? Nothing else about the treadmill's output reaches the
+game.
+
+**2. We do NOT create a virtual gamepad.** The RealityRunner desktop app drives a
+ViGEm virtual Xbox 360 pad. We do not. We use the same in-process XInput import
+hook as HeadDirectedTurning and TiptoeToJumpVR, via the shared mux. No ViGEmBus,
+no driver, no external process. The RR desktop app must be closed anyway, since
+we take COM4 — and its virtual pad disappears with it.
+
+**3. Exactly two moving states, both constant.** Treadmill speed only *selects*
+between them; it never modulates the output.
+
+| Treadmill | Left stick Y | LB (`0x0100`) | Skyrim result |
+| --- | --- | --- | --- |
+| stopped | neutral | released | standing |
+| below threshold (any speed) | full forward | released | walk |
+| above threshold (any speed) | full forward | **held** | sprint |
+
+**4. We cannot press a VR grip. Do not try.** The player's manual sprint is a
+left-*grip* binding on the VR controller. We inject through the XInput gamepad
+path, so a VR grip is not reachable from here, and no VR-controller injection
+should be attempted. We send **LB** instead. This is not a compromise: in this
+MGO/VRIK profile, Skyrim's Sprint action is reachable from *two* independent
+routes — the player's VR grip binding, and gamepad LB — and RealityRunner has
+been using the LB route all along. The in-game result is identical; only the
+plumbing differs.
+
+**5. Skyrim cannot tell the player from the mod — gameplay-wise.** It sees
+"forward input" and "sprint input" and acts on them. There is one device-level
+nuance: Skyrim knows the input came from a *gamepad* rather than the VR
+controllers, so on-screen prompts may show Xbox glyphs. This is **already true
+today**, because the RR app's virtual pad has been feeding Skyrim gamepad input
+the entire time the treadmill has been in use. We are replacing one
+gamepad-shaped source with a cleaner in-process one; nothing changes in how
+Skyrim perceives input.
+
+**6. Fail safe, always.** A stuck forward signal is the dangerous failure. See
+Failure Behavior — it is a hard requirement, not a nice-to-have.
+
+Restated as behavior:
 
 - moving -> hold left stick forward
-- moving fast -> hold left stick forward + sprint
-- stopped -> release movement
+- moving fast -> hold left stick forward + LB
+- stopped -> release movement and LB
 - brief missteps/dropouts -> keep movement briefly (strictly bounded, see
   Failure Behavior)
 
@@ -37,9 +84,14 @@ The mod should translate treadmill movement into stable Skyrim locomotion:
 - Our Python CSV logger captured live API output.
 - The API joystick stream is curve-mapped output, not raw magnet pulses, but it
   is enough for walking/sprinting intent.
-- Skyrim VR/MGO appears to behave mainly as walk vs sprint, not fine analog
-  speed. (See Output Semantics — Skyrim's gamepad path actually has three
-  tiers, and we should expose all three as tunables.)
+- The RealityRunner desktop app reaches the game through a **ViGEm virtual Xbox
+  360 pad** (see "How The Desktop App Reaches The Game"), holding `LB`
+  continuously while moving and varying left-stick Y with speed.
+- Sprint in Skyrim requires **both** a sprint input and sufficient forward
+  movement. Manual play confirms full forward with no sprint input still yields
+  a walk — so magnitude alone never causes running, and a single full-forward
+  value plus button control is sufficient. **There is no walk/run magnitude
+  tuning surface in this design.**
 
 ## Protocol Facts (from the vendored API source)
 
