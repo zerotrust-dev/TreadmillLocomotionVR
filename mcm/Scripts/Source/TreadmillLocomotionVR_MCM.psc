@@ -239,6 +239,66 @@ Function OpenSlider(Float currentValue, Float defaultValue, Float minValue, Floa
 	SetSliderDialogInterval(interval)
 EndFunction
 
+Function SetEnabled(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("Enabled", value)
+	SaveAndApply()
+EndFunction
+
+Function SetOutput(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("EnableOutput", value)
+	SaveAndApply()
+EndFunction
+
+Function SetDirectApi(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("DirectApiEnabled", value)
+	SaveAndApply()
+EndFunction
+
+Function SetTelemetry(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("Telemetry", value)
+	SaveAndApply()
+EndFunction
+
+Function SetDebugLogging(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("DebugLogging", value)
+	SaveAndApply()
+EndFunction
+
+Function SetDeadzone(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("Deadzone", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunThreshold(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunThreshold", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunEnter(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunExit(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunCancel(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetCoast(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetForwardMagnitude(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("ForwardMagnitude", value)
+	SaveAndApply()
+EndFunction
+
 Function ApplyPreset(Int preset)
 	TreadmillLocomotionVR.SetBoolSetting("Enabled", True)
 	TreadmillLocomotionVR.SetBoolSetting("DirectApiEnabled", True)
@@ -249,13 +309,13 @@ Function ApplyPreset(Int preset)
 	If preset == 0
 		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.60)
 		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.12)
-		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.45)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.70)
 		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.12)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.30)
 	ElseIf preset == 1
-		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.75)
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.70)
 		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.22)
-		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.35)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.60)
 		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.12)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.25)
 	ElseIf preset == 2

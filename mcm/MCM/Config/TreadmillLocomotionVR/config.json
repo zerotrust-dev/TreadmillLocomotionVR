@@ -1,4 +1,273 @@
 {
   "modName": "TreadmillLocomotionVR",
-  "displayName": "Treadmill Locomotion VR"
+  "displayName": "Treadmill Locomotion VR",
+  "pages": [
+    {
+      "pageDisplayName": "Tuning",
+      "cursorFillMode": "topToBottom",
+      "content": [
+        {
+          "text": "Status",
+          "type": "header"
+        },
+        {
+          "id": "bEnabled:Tuning",
+          "text": "Treadmill locomotion",
+          "help": "Turns treadmill locomotion on or off. Leave on for normal play.",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetEnabled",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "bEnableOutput:Tuning",
+          "text": "Send movement input",
+          "help": "Sends walk/run movement input to Skyrim. Turn off to log without moving.",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetOutput",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "text": "Presets",
+          "type": "header"
+        },
+        {
+          "text": "Apply Gentle",
+          "help": "Easier run trigger. Useful while learning the treadmill or walking carefully.",
+          "type": "text",
+          "action": {
+            "type": "CallFunction",
+            "function": "ApplyPreset",
+            "params": ["0"]
+          }
+        },
+        {
+          "text": "Apply Balanced",
+          "help": "Recommended starting point for testing.",
+          "type": "text",
+          "action": {
+            "type": "CallFunction",
+            "function": "ApplyPreset",
+            "params": ["1"]
+          }
+        },
+        {
+          "text": "Apply Fast",
+          "help": "Requires a stronger treadmill signal before running.",
+          "type": "text",
+          "action": {
+            "type": "CallFunction",
+            "function": "ApplyPreset",
+            "params": ["2"]
+          }
+        },
+        {
+          "text": "Most useful tuning",
+          "type": "header"
+        },
+        {
+          "id": "fDeadzone:Tuning",
+          "text": "Movement deadzone",
+          "help": "Minimum treadmill signal that counts as movement. Raise if tiny accidental movement starts walking.",
+          "type": "slider",
+          "valueOptions": {
+            "min": 0.02,
+            "max": 0.30,
+            "step": 0.01,
+            "formatString": "{2}",
+            "sourceType": "ModSettingFloat"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetDeadzone",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "fRunThreshold:Tuning",
+          "text": "Run threshold",
+          "help": "Treadmill signal needed to run. Lower this if run feels hard to reach or flickers near the edge.",
+          "type": "slider",
+          "valueOptions": {
+            "min": 0.30,
+            "max": 1.00,
+            "step": 0.01,
+            "formatString": "{2}",
+            "sourceType": "ModSettingFloat"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetRunThreshold",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "fRunEnterSeconds:Tuning",
+          "text": "Run start delay",
+          "help": "How long the run signal must be present before running starts. Lower reacts faster.",
+          "type": "slider",
+          "valueOptions": {
+            "min": 0.00,
+            "max": 0.80,
+            "step": 0.01,
+            "formatString": "{2} s",
+            "sourceType": "ModSettingFloat"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetRunEnter",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "fRunExitSeconds:Tuning",
+          "text": "Run release delay",
+          "help": "How long run can be absent before returning to walking. Raise if run flickers.",
+          "type": "slider",
+          "valueOptions": {
+            "min": 0.00,
+            "max": 1.00,
+            "step": 0.01,
+            "formatString": "{2} s",
+            "sourceType": "ModSettingFloat"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetRunExit",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "fRunCancelSeconds:Tuning",
+          "text": "Run cancel pulse",
+          "help": "Briefly releases forward after running ends so Skyrim stops running before normal walking resumes.",
+          "type": "slider",
+          "valueOptions": {
+            "min": 0.00,
+            "max": 0.50,
+            "step": 0.01,
+            "formatString": "{2} s",
+            "sourceType": "ModSettingFloat"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetRunCancel",
+            "params": ["{value}"]
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Diagnostics",
+      "cursorFillMode": "topToBottom",
+      "content": [
+        {
+          "text": "Smoothing",
+          "type": "header"
+        },
+        {
+          "id": "fCoastMaxSeconds:Diagnostics",
+          "text": "Movement coast",
+          "help": "How long walking continues over brief missing samples. Raise slightly if movement stutters.",
+          "type": "slider",
+          "valueOptions": {
+            "min": 0.00,
+            "max": 1.00,
+            "step": 0.01,
+            "formatString": "{2} s",
+            "sourceType": "ModSettingFloat"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetCoast",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "fForwardMagnitude:Diagnostics",
+          "text": "Stick strength",
+          "help": "Strength of virtual left-stick-forward. Leave at 1.00 unless debugging.",
+          "type": "slider",
+          "valueOptions": {
+            "min": 0.25,
+            "max": 1.00,
+            "step": 0.05,
+            "formatString": "{2}",
+            "sourceType": "ModSettingFloat"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetForwardMagnitude",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "text": "Logs",
+          "type": "header"
+        },
+        {
+          "id": "bDirectApiEnabled:Diagnostics",
+          "text": "Direct RealityRunner API",
+          "help": "Reads RealityRunner directly from COM4. Close the RealityRunner desktop app before enabling this.",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetDirectApi",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "bTelemetry:Diagnostics",
+          "text": "Telemetry CSV",
+          "help": "Writes intent CSV in the SKSE log folder. Keep on while tuning.",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetTelemetry",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "id": "bDebugLogging:Diagnostics",
+          "text": "Debug logging",
+          "help": "Writes extra debug log details. Leave off unless troubleshooting.",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "SetDebugLogging",
+            "params": ["{value}"]
+          }
+        },
+        {
+          "text": "Save and apply now",
+          "help": "Writes the INI and applies settings without restarting Skyrim.",
+          "type": "text",
+          "action": {
+            "type": "CallFunction",
+            "function": "SaveAndApply"
+          }
+        }
+      ]
+    }
+  ]
 }
