@@ -76,6 +76,10 @@ namespace TLV
             "DirectApiEnabled",
             directApiEnabled_);
         comPort_ = ini.GetValue("RealityRunner", "ComPort", comPort_.c_str());
+        apiPollMs_ = std::clamp<std::uint32_t>(
+            ReadUInt(ini, "RealityRunner", "ApiPollMs", apiPollMs_),
+            10,
+            1000);
         enableOutput_ = ReadBool(ini, "Output", "EnableOutput", enableOutput_);
         forwardMagnitude_ = std::clamp(
             ReadFloat(ini, "Output", "ForwardMagnitude", forwardMagnitude_),
@@ -132,10 +136,11 @@ namespace TLV
             logAllUsers_,
             userIndex_);
         logger::info(
-            "directApi={} comPort={} enableOutput={} forwardMagnitude={:.3f} "
+            "directApi={} comPort={} apiPollMs={} enableOutput={} forwardMagnitude={:.3f} "
             "coast={:.3f}s stale={}ms sprintEnter={:.3f}s sprintExit={:.3f}s",
             directApiEnabled_,
             comPort_,
+            apiPollMs_,
             enableOutput_,
             forwardMagnitude_,
             coastMaxSeconds_,
@@ -154,6 +159,7 @@ namespace TLV
     const AnalysisSettings& Settings::Analysis() const { return analysis_; }
     bool Settings::DirectApiEnabled() const { return directApiEnabled_; }
     const std::string& Settings::ComPort() const { return comPort_; }
+    std::uint32_t Settings::ApiPollMs() const { return apiPollMs_; }
     bool Settings::EnableOutput() const { return enableOutput_; }
     float Settings::ForwardMagnitude() const { return forwardMagnitude_; }
     double Settings::CoastMaxSeconds() const { return coastMaxSeconds_; }

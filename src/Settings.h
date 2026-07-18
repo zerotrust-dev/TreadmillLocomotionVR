@@ -21,6 +21,7 @@ namespace TLV
         [[nodiscard]] const AnalysisSettings& Analysis() const;
         [[nodiscard]] bool DirectApiEnabled() const;
         [[nodiscard]] const std::string& ComPort() const;
+        [[nodiscard]] std::uint32_t ApiPollMs() const;
         [[nodiscard]] bool EnableOutput() const;
         [[nodiscard]] float ForwardMagnitude() const;
         [[nodiscard]] double CoastMaxSeconds() const;
@@ -39,6 +40,7 @@ namespace TLV
         AnalysisSettings analysis_{};
         bool directApiEnabled_{ false };
         std::string comPort_{ "COM4" };
+        std::uint32_t apiPollMs_{ 50 };
         bool enableOutput_{ false };
         float forwardMagnitude_{ 1.0F };
         double coastMaxSeconds_{ 0.25 };

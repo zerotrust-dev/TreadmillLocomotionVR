@@ -541,6 +541,22 @@ Log CSV fields:
 - intended stick output
 - intended sprint output
 
+## 2026-07-18 Acquisition Correction
+
+The first logging-only SKSE test proved that the device did not keep pushing
+joystick frames after a single `SET stream true,WIRED`. The DLL read exactly one
+sample and then every game-frame intent row went stale.
+
+The implementation now follows the proven Python logger behavior instead:
+
+```text
+connect -> drain -> GET curve/profiles/bootmode -> repeat SET stream true,WIRED
+```
+
+`ApiPollMs=50` controls the repeated joystick poll interval. Do not build output
+logic on the one-shot continuous-push assumption unless a future firmware/API
+test proves it.
+
 Then V2: flip output on behind the INI flag, wired through the mux exactly as
 described in Component 3, and test in this order — treadmill mod alone, then
 with HeadDirectedTurning, then all three together.

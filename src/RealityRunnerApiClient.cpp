@@ -392,42 +392,29 @@ namespace TLV
             logger::warn("RealityRunner boot mode read failed");
         }
 
-        const auto firstStreamFrame =
-            SendCommand(handle.value, "SET stream true,WIRED\n", stopRequested_);
-        if (!firstStreamFrame) {
-            logger::error("RealityRunner stream enable failed");
-            running_.store(false, std::memory_order_relaxed);
-            MarkDisconnected();
-            return;
-        }
-        if (auto joystick = ParseJoystick(*firstStreamFrame)) {
-            Publish(joystick->first, joystick->second, *firstStreamFrame);
-        } else {
-            logger::warn(
-                "RealityRunner first stream frame was not joystick data: {}",
-                *firstStreamFrame);
-        }
-
-        logger::info("RealityRunner stream enabled; reading frames");
+        const auto pollMs = Settings::GetSingleton().ApiPollMs();
+        logger::info(
+            "RealityRunner joystick polling started intervalMs={}",
+            pollMs);
         while (!stopRequested_.load(std::memory_order_relaxed)) {
-            const auto payload = ReadFrame(handle.value, stopRequested_);
+            const auto payload =
+                SendCommand(handle.value, "SET stream true,WIRED\n", stopRequested_);
             if (!payload) {
                 if (!stopRequested_.load(std::memory_order_relaxed)) {
-                    logger::warn("RealityRunner stream read failed; stopping reader");
+                    logger::warn("RealityRunner joystick poll failed; stopping reader");
                 }
                 break;
             }
             const auto joystick = ParseJoystick(*payload);
             if (!joystick) {
-                logger::debug("Ignoring non-joystick stream payload: {}", *payload);
+                logger::debug("Ignoring non-joystick poll payload: {}", *payload);
                 continue;
             }
             Publish(joystick->first, joystick->second, *payload);
+            Sleep(pollMs);
         }
 
-        if (!stopRequested_.load(std::memory_order_relaxed)) {
-            (void)SendCommand(handle.value, "SET stream false,WIRED\n", stopRequested_);
-        }
+        (void)SendCommand(handle.value, "SET stream false,WIRED\n", stopRequested_);
         running_.store(false, std::memory_order_relaxed);
         MarkDisconnected();
         logger::info("RealityRunner API reader stopped");
