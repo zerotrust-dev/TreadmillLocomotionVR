@@ -15,12 +15,17 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cctype>
 #include <cstring>
 #include <fstream>
+#include <iomanip>
 #include <mutex>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <vector>
 
 using namespace std::literals;
 

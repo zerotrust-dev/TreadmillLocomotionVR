@@ -24,8 +24,16 @@ target_sources(
     ${PROJECT_NAME}
     PRIVATE
         src/main.cpp
+        src/GameIntegration.cpp
+        src/GameIntegration.h
+        src/IntentTelemetry.cpp
+        src/IntentTelemetry.h
         src/LocomotionAnalysis.cpp
         src/LocomotionAnalysis.h
+        src/LocomotionIntent.cpp
+        src/LocomotionIntent.h
+        src/RealityRunnerApiClient.cpp
+        src/RealityRunnerApiClient.h
         src/Settings.cpp
         src/Settings.h
         src/Telemetry.cpp

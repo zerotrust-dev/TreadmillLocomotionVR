@@ -87,3 +87,26 @@ The official Python demo successfully connected locally on 2026-07-17:
 Movement produced joystick values such as `-6319`, `-17488`, `-23406`, and
 `-20025`; sprint became active at `-23406`. Treat sign and scaling as measured
 API output, not yet as final Skyrim input semantics.
+
+## First CSV Capture
+
+Capture:
+`captures/rr-api-test.csv`
+
+Observed:
+
+- 1,068 samples over 64.0 seconds.
+- Actual interval averaged 60 ms with `--poll-ms 50`.
+- 352 samples were nonzero.
+- 215 samples had sprint active.
+- Values ranged from `0` to `-30495`.
+- Values were quantized and aligned with configured curve/deadzone levels:
+  `4222`, `15798`, `24252`, `28414`, and `30495`.
+- Sprint exactly matched `abs(joystickValue) >= 22301`.
+
+Interpretation:
+
+The community API joystick stream is clean and useful, but it is curve-mapped
+RealityRunner output rather than raw magnet/pulse data. It can validate or
+replace Skyrim-visible XInput logging, but raw treadmill pulse work still needs
+a lower-level API command or serial proxy.

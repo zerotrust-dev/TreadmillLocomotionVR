@@ -1,5 +1,7 @@
 #include "Settings.h"
 #include "Version.h"
+#include "GameIntegration.h"
+#include "RealityRunnerApiClient.h"
 #include "XInputTelemetryProbe.h"
 
 namespace
@@ -36,10 +38,27 @@ namespace
             return;
         }
 
-        if (TLV::XInputTelemetryProbe::GetSingleton().Initialize()) {
-            logger::info("Treadmill locomotion telemetry probe initialized");
-        } else {
-            logger::warn("Treadmill locomotion telemetry probe did not initialize");
+        if (settings.DirectApiEnabled()) {
+            if (TLV::RealityRunnerApiClient::GetSingleton().Start()) {
+                logger::info("RealityRunner direct API reader started");
+            } else {
+                logger::warn("RealityRunner direct API reader did not start");
+            }
+
+            if (TLV::GameIntegration::GetSingleton().Initialize()) {
+                logger::info("Treadmill locomotion intent integration initialized");
+            } else {
+                logger::warn("Treadmill locomotion intent integration did not initialize");
+            }
+            return;
+        }
+
+        if (settings.PatchXInput()) {
+            if (TLV::XInputTelemetryProbe::GetSingleton().Initialize()) {
+                logger::info("Treadmill locomotion telemetry probe initialized");
+            } else {
+                logger::warn("Treadmill locomotion telemetry probe did not initialize");
+            }
         }
     }
 }
