@@ -2,6 +2,8 @@
 
 #include "LocomotionAnalysis.h"
 
+#include <string_view>
+
 namespace TLV
 {
     class Settings
@@ -10,6 +12,11 @@ namespace TLV
         static Settings& GetSingleton();
 
         void Load();
+        [[nodiscard]] bool Save() const;
+        [[nodiscard]] bool GetBool(std::string_view name) const;
+        [[nodiscard]] float GetFloat(std::string_view name) const;
+        [[nodiscard]] bool SetBool(std::string_view name, bool value);
+        [[nodiscard]] bool SetFloat(std::string_view name, float value);
 
         [[nodiscard]] bool Enabled() const;
         [[nodiscard]] bool Telemetry() const;

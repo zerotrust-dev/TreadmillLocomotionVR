@@ -34,6 +34,8 @@ target_sources(
         src/LocomotionAnalysis.h
         src/LocomotionIntent.cpp
         src/LocomotionIntent.h
+        src/PapyrusApi.cpp
+        src/PapyrusApi.h
         src/RealityRunnerApiClient.cpp
         src/RealityRunnerApiClient.h
         src/Settings.cpp
@@ -66,6 +68,22 @@ install(
 install(
     FILES config/TreadmillLocomotionVR.ini
     DESTINATION SKSE/Plugins
+)
+
+install(
+    DIRECTORY mcm/
+    DESTINATION .
+    FILES_MATCHING
+        PATTERN "*.md"
+        PATTERN "*.json"
+        PATTERN "*.ini"
+        PATTERN "*.psc"
+        PATTERN "*.flg"
+        PATTERN "README.md" EXCLUDE
+        PATTERN "Scripts/Source/Stubs" EXCLUDE
+        # Shared Papyrus compiler-flags file is compile-time source and can
+        # conflict harmlessly between these sibling mods in MO2, so exclude it.
+        PATTERN "TESV_Papyrus_Flags.flg" EXCLUDE
 )
 
 include(CTest)

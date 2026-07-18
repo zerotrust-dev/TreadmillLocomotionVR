@@ -1,6 +1,7 @@
 #include "Settings.h"
 #include "Version.h"
 #include "GameIntegration.h"
+#include "PapyrusApi.h"
 #include "RealityRunnerApiClient.h"
 #include "XInputTelemetryProbe.h"
 
@@ -32,6 +33,10 @@ namespace
 
         auto& settings = TLV::Settings::GetSingleton();
         settings.Load();
+        spdlog::set_level(
+            settings.DebugLogging() ?
+                spdlog::level::debug :
+                spdlog::level::info);
 
         if (!settings.Enabled()) {
             logger::info("Treadmill locomotion telemetry is disabled");
@@ -73,6 +78,12 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
     const auto messaging = SKSE::GetMessagingInterface();
     if (!messaging || !messaging->RegisterListener(OnSKSEMessage)) {
         logger::critical("Unable to register SKSE message listener");
+        return false;
+    }
+
+    const auto papyrus = SKSE::GetPapyrusInterface();
+    if (!papyrus || !papyrus->Register(TLV::PapyrusApi::Register)) {
+        logger::critical("Unable to register Papyrus API");
         return false;
     }
 

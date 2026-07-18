@@ -42,6 +42,21 @@ namespace
     {
         return ini.GetDoubleValue(section, key, fallback);
     }
+
+    void WriteBool(CSimpleIniA& ini, const char* section, const char* key, bool value)
+    {
+        ini.SetBoolValue(section, key, value);
+    }
+
+    void WriteFloat(CSimpleIniA& ini, const char* section, const char* key, float value)
+    {
+        ini.SetDoubleValue(section, key, value);
+    }
+
+    void WriteDouble(CSimpleIniA& ini, const char* section, const char* key, double value)
+    {
+        ini.SetDoubleValue(section, key, value);
+    }
 }
 
 namespace TLV
@@ -123,7 +138,7 @@ namespace TLV
             1.0F);
         analysis_.sprintThreshold = std::clamp(
             ReadFloat(ini, "Analysis", "SprintThreshold", analysis_.sprintThreshold),
-            analysis_.runThreshold,
+            analysis_.deadzone,
             1.0F);
 
         logger::info(
@@ -147,6 +162,165 @@ namespace TLV
             staleTimeoutMs_,
             sprintEnterSeconds_,
             sprintExitSeconds_);
+    }
+
+    bool Settings::Save() const
+    {
+        CSimpleIniA ini;
+        ini.SetUnicode();
+
+        WriteBool(ini, "General", "Enabled", enabled_);
+        WriteBool(ini, "General", "Telemetry", telemetry_);
+        WriteBool(ini, "General", "DebugLogging", debugLogging_);
+
+        WriteBool(ini, "RealityRunner", "DirectApiEnabled", directApiEnabled_);
+        ini.SetValue("RealityRunner", "ComPort", comPort_.c_str());
+        ini.SetLongValue("RealityRunner", "ApiPollMs", apiPollMs_);
+
+        WriteBool(ini, "Output", "EnableOutput", enableOutput_);
+        WriteFloat(ini, "Output", "ForwardMagnitude", forwardMagnitude_);
+
+        WriteDouble(ini, "Intent", "CoastMaxSeconds", coastMaxSeconds_);
+        ini.SetLongValue("Intent", "StaleTimeoutMs", staleTimeoutMs_);
+        WriteDouble(ini, "Intent", "SprintEnterSeconds", sprintEnterSeconds_);
+        WriteDouble(ini, "Intent", "SprintExitSeconds", sprintExitSeconds_);
+
+        WriteFloat(ini, "Analysis", "Deadzone", analysis_.deadzone);
+        WriteFloat(ini, "Analysis", "WalkThreshold", analysis_.walkThreshold);
+        WriteFloat(ini, "Analysis", "RunThreshold", analysis_.runThreshold);
+        WriteFloat(ini, "Analysis", "SprintThreshold", analysis_.sprintThreshold);
+
+        if (ini.SaveFile(settingsPath) < 0) {
+            logger::error("Could not save {}", "TreadmillLocomotionVR.ini");
+            return false;
+        }
+
+        logger::info("Saved {}", "TreadmillLocomotionVR.ini");
+        return true;
+    }
+
+    bool Settings::GetBool(std::string_view name) const
+    {
+        if (name == "Enabled") {
+            return enabled_;
+        }
+        if (name == "Telemetry") {
+            return telemetry_;
+        }
+        if (name == "DebugLogging") {
+            return debugLogging_;
+        }
+        if (name == "DirectApiEnabled") {
+            return directApiEnabled_;
+        }
+        if (name == "EnableOutput") {
+            return enableOutput_;
+        }
+        return false;
+    }
+
+    float Settings::GetFloat(std::string_view name) const
+    {
+        if (name == "Deadzone") {
+            return analysis_.deadzone;
+        }
+        if (name == "WalkThreshold") {
+            return analysis_.walkThreshold;
+        }
+        if (name == "RunThreshold") {
+            return analysis_.runThreshold;
+        }
+        if (name == "SprintThreshold") {
+            return analysis_.sprintThreshold;
+        }
+        if (name == "ForwardMagnitude") {
+            return forwardMagnitude_;
+        }
+        if (name == "CoastMaxSeconds") {
+            return static_cast<float>(coastMaxSeconds_);
+        }
+        if (name == "StaleTimeoutMs") {
+            return static_cast<float>(staleTimeoutMs_);
+        }
+        if (name == "SprintEnterSeconds") {
+            return static_cast<float>(sprintEnterSeconds_);
+        }
+        if (name == "SprintExitSeconds") {
+            return static_cast<float>(sprintExitSeconds_);
+        }
+        return 0.0F;
+    }
+
+    bool Settings::SetBool(std::string_view name, bool value)
+    {
+        if (name == "Enabled") {
+            enabled_ = value;
+            return true;
+        }
+        if (name == "Telemetry") {
+            telemetry_ = value;
+            return true;
+        }
+        if (name == "DebugLogging") {
+            debugLogging_ = value;
+            return true;
+        }
+        if (name == "DirectApiEnabled") {
+            directApiEnabled_ = value;
+            return true;
+        }
+        if (name == "EnableOutput") {
+            enableOutput_ = value;
+            return true;
+        }
+        return false;
+    }
+
+    bool Settings::SetFloat(std::string_view name, float value)
+    {
+        if (name == "Deadzone") {
+            analysis_.deadzone = std::clamp(value, 0.0F, 0.50F);
+            analysis_.walkThreshold = (std::max)(analysis_.walkThreshold, analysis_.deadzone);
+            analysis_.runThreshold = (std::max)(analysis_.runThreshold, analysis_.walkThreshold);
+            analysis_.sprintThreshold = (std::max)(analysis_.sprintThreshold, analysis_.deadzone);
+            return true;
+        }
+        if (name == "WalkThreshold") {
+            analysis_.walkThreshold = std::clamp(value, analysis_.deadzone, 1.0F);
+            return true;
+        }
+        if (name == "RunThreshold") {
+            analysis_.runThreshold = std::clamp(value, analysis_.walkThreshold, 1.0F);
+            return true;
+        }
+        if (name == "SprintThreshold") {
+            analysis_.sprintThreshold = std::clamp(value, analysis_.deadzone, 1.0F);
+            return true;
+        }
+        if (name == "ForwardMagnitude") {
+            forwardMagnitude_ = std::clamp(value, 0.0F, 1.0F);
+            return true;
+        }
+        if (name == "CoastMaxSeconds") {
+            coastMaxSeconds_ = std::clamp<double>(value, 0.0, 2.0);
+            return true;
+        }
+        if (name == "StaleTimeoutMs") {
+            staleTimeoutMs_ = std::clamp<std::uint32_t>(
+                static_cast<std::uint32_t>((std::max)(0.0F, value)),
+                100,
+                5000);
+            return true;
+        }
+        if (name == "SprintEnterSeconds") {
+            sprintEnterSeconds_ = std::clamp<double>(value, 0.0, 2.0);
+            return true;
+        }
+        if (name == "SprintExitSeconds") {
+            sprintExitSeconds_ = std::clamp<double>(value, 0.0, 2.0);
+            return true;
+        }
+        return false;
     }
 
     bool Settings::Enabled() const { return enabled_; }

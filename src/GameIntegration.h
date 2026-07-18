@@ -8,6 +8,7 @@ namespace TLV
         static GameIntegration& GetSingleton();
 
         [[nodiscard]] bool Initialize();
+        [[nodiscard]] bool ApplySettings();
         void Shutdown();
 
     private:

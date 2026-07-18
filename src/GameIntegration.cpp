@@ -53,6 +53,28 @@ namespace TLV
         return true;
     }
 
+    bool GameIntegration::ApplySettings()
+    {
+        const auto& settings = Settings::GetSingleton();
+        spdlog::set_level(
+            settings.DebugLogging() ?
+                spdlog::level::debug :
+                spdlog::level::info);
+
+        auto& output = XInputLocomotionOutput::GetSingleton();
+        if (!settings.Enabled() ||
+            !settings.DirectApiEnabled() ||
+            !settings.EnableOutput()) {
+            output.SetLocomotion(0, 0);
+            return true;
+        }
+
+        if (!output.IsOutputPathReady()) {
+            return output.Initialize();
+        }
+        return true;
+    }
+
     void GameIntegration::Shutdown()
     {
         XInputLocomotionOutput::GetSingleton().SetLocomotion(0, 0);
