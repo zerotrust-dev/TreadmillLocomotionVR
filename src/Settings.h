@@ -33,9 +33,9 @@ namespace TLV
         [[nodiscard]] float ForwardMagnitude() const;
         [[nodiscard]] double CoastMaxSeconds() const;
         [[nodiscard]] std::uint32_t StaleTimeoutMs() const;
-        [[nodiscard]] double SprintEnterSeconds() const;
-        [[nodiscard]] double SprintExitSeconds() const;
-        [[nodiscard]] double SprintCancelSeconds() const;
+        [[nodiscard]] double RunEnterSeconds() const;
+        [[nodiscard]] double RunExitSeconds() const;
+        [[nodiscard]] double RunCancelSeconds() const;
 
     private:
         bool enabled_{ false };
@@ -53,8 +53,8 @@ namespace TLV
         float forwardMagnitude_{ 1.0F };
         double coastMaxSeconds_{ 0.25 };
         std::uint32_t staleTimeoutMs_{ 450 };
-        double sprintEnterSeconds_{ 0.22 };
-        double sprintExitSeconds_{ 0.35 };
-        double sprintCancelSeconds_{ 0.12 };
+        double runEnterSeconds_{ 0.22 };
+        double runExitSeconds_{ 0.35 };
+        double runCancelSeconds_{ 0.12 };
     };
 }

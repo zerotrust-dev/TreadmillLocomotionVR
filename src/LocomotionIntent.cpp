@@ -29,14 +29,14 @@ namespace
             JoystickMagnitude(snapshot.joystickValue) >= analysis.deadzone;
     }
 
-    [[nodiscard]] bool IsSprinting(
+    [[nodiscard]] bool IsRunning(
         const TLV::RealityRunnerSnapshot& snapshot,
         const TLV::AnalysisSettings& analysis)
     {
         if (!snapshot.connected) {
             return false;
         }
-        return JoystickMagnitude(snapshot.joystickValue) >= analysis.sprintThreshold;
+        return JoystickMagnitude(snapshot.joystickValue) >= analysis.runThreshold;
     }
 }
 
@@ -49,8 +49,8 @@ namespace TLV
             return "stopped";
         case IntentState::walking:
             return "walking";
-        case IntentState::sprinting:
-            return "sprinting";
+        case IntentState::running:
+            return "running";
         default:
             return "unknown";
         }
@@ -66,8 +66,8 @@ namespace TLV
     {
         state_ = IntentState::stopped;
         noMovementSeconds_ = 0.0;
-        sprintPresentSeconds_ = 0.0;
-        sprintAbsentSeconds_ = 0.0;
+        runPresentSeconds_ = 0.0;
+        runAbsentSeconds_ = 0.0;
         lastSequence_ = 0;
     }
 
@@ -98,24 +98,24 @@ namespace TLV
             }
             state_ = IntentState::stopped;
             noMovementSeconds_ = 0.0;
-            sprintPresentSeconds_ = 0.0;
-            sprintAbsentSeconds_ = 0.0;
+            runPresentSeconds_ = 0.0;
+            runAbsentSeconds_ = 0.0;
         } else {
             const auto& analysis = settings.Analysis();
             const auto moving = IsMoving(snapshot, analysis);
-            const auto sprinting = IsSprinting(snapshot, analysis);
+            const auto running = IsRunning(snapshot, analysis);
             if (moving) {
                 noMovementSeconds_ = 0.0;
             } else {
                 noMovementSeconds_ += dt;
             }
 
-            if (sprinting) {
-                sprintPresentSeconds_ += dt;
-                sprintAbsentSeconds_ = 0.0;
+            if (running) {
+                runPresentSeconds_ += dt;
+                runAbsentSeconds_ = 0.0;
             } else {
-                sprintAbsentSeconds_ += dt;
-                sprintPresentSeconds_ = 0.0;
+                runAbsentSeconds_ += dt;
+                runPresentSeconds_ = 0.0;
             }
 
             switch (state_) {
@@ -130,19 +130,19 @@ namespace TLV
                     state_ = IntentState::stopped;
                     reason = "coast-expired";
                 } else if (
-                    sprintPresentSeconds_ >= settings.SprintEnterSeconds()) {
-                    state_ = IntentState::sprinting;
-                    reason = "sprint-enter";
+                    runPresentSeconds_ >= settings.RunEnterSeconds()) {
+                    state_ = IntentState::running;
+                    reason = "run-enter";
                 }
                 break;
-            case IntentState::sprinting:
+            case IntentState::running:
                 if (!moving && noMovementSeconds_ >= settings.CoastMaxSeconds()) {
                     state_ = IntentState::stopped;
                     reason = "coast-expired";
                 } else if (
-                    sprintAbsentSeconds_ >= settings.SprintExitSeconds()) {
+                    runAbsentSeconds_ >= settings.RunExitSeconds()) {
                     state_ = IntentState::walking;
-                    reason = "sprint-exit";
+                    reason = "run-exit";
                 }
                 break;
             }
@@ -156,12 +156,12 @@ namespace TLV
         output.sampleSequence = snapshot.sequence;
         output.frameAgeMs = frameAge;
         output.joystickValue = snapshot.joystickValue;
-        output.deviceSprintActive = snapshot.sprintActive;
+        output.deviceRunSignal = snapshot.sprintActive;
         output.stale = !hasFreshFrame;
         output.intendedLeftY =
             state_ == IntentState::stopped ? 0 : forward;
         output.intendedButtons =
-            state_ == IntentState::sprinting ? xinputGamepadLeftShoulder : 0;
+            state_ == IntentState::running ? xinputGamepadLeftShoulder : 0;
         lastSequence_ = snapshot.sequence;
         return output;
     }

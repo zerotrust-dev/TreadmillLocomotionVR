@@ -6,6 +6,13 @@
 > questions that existing work already answers; **[correction]** marks points
 > changed from the original draft.
 
+## Terminology
+
+The mod uses player-facing **walk/run** terminology. RealityRunner's API and
+desktop UI still use names such as `sprintActive`, `sprintButton`, and
+`sprintThreshold`; those remain in this document only when referring to literal
+device fields, captured data, or vendor settings.
+
 ## Goal
 
 Build a single Skyrim VR SKSE mod that lets the player use the RealityRunner
@@ -18,10 +25,10 @@ If you read nothing else, read this. It is the whole design in one place, and
 several of the points below reverse assumptions made earlier in this document's
 history.
 
-**1. The treadmill becomes a sensor. The mod becomes the player's thumb and
-grip.** We open COM4 purely to read speed and decide one thing: are we below or
-above the sprint threshold? Nothing else about the treadmill's output reaches the
-game.
+**1. The treadmill becomes a sensor. The mod becomes the player's thumb and run
+button.** We open COM4 purely to read speed and decide one thing: are we below
+or above the run threshold? Nothing else about the treadmill's output reaches
+the game.
 
 **2. We do NOT create a virtual gamepad.** The RealityRunner desktop app drives a
 ViGEm virtual Xbox 360 pad. We do not. We use the same in-process XInput import
@@ -36,19 +43,19 @@ between them; it never modulates the output.
 | --- | --- | --- | --- |
 | stopped | neutral | released | standing |
 | below threshold (any speed) | full forward | released | walk |
-| above threshold (any speed) | full forward | **held** | sprint |
+| above threshold (any speed) | full forward | **held** | run |
 
-**4. We cannot press a VR grip. Do not try.** The player's manual sprint is a
+**4. We cannot press a VR grip. Do not try.** The player's manual run is a
 left-*grip* binding on the VR controller. We inject through the XInput gamepad
 path, so a VR grip is not reachable from here, and no VR-controller injection
 should be attempted. We send **LB** instead. This is not a compromise: in this
-MGO/VRIK profile, Skyrim's Sprint action is reachable from *two* independent
+MGO/VRIK profile, Skyrim's run action is reachable from *two* independent
 routes — the player's VR grip binding, and gamepad LB — and RealityRunner has
 been using the LB route all along. The in-game result is identical; only the
 plumbing differs.
 
 **5. Skyrim cannot tell the player from the mod — gameplay-wise.** It sees
-"forward input" and "sprint input" and acts on them. There is one device-level
+"forward input" and "run input" and acts on them. There is one device-level
 nuance: Skyrim knows the input came from a *gamepad* rather than the VR
 controllers, so on-screen prompts may show Xbox glyphs. This is **already true
 today**, because the RR app's virtual pad has been feeding Skyrim gamepad input
@@ -83,12 +90,12 @@ Restated as behavior:
   - `sprintThreshold=22301`
 - Our Python CSV logger captured live API output.
 - The API joystick stream is curve-mapped output, not raw magnet pulses, but it
-  is enough for walking/sprinting intent.
+  is enough for walk/run intent.
 - The RealityRunner desktop app reaches the game through a **ViGEm virtual Xbox
   360 pad** (see "How The Desktop App Reaches The Game"), holding `LB`
   continuously while moving and varying left-stick Y with speed.
-- Sprint in Skyrim requires **both** a sprint input and sufficient forward
-  movement. Manual play confirms full forward with no sprint input still yields
+- Running in Skyrim requires **both** a run input and sufficient forward
+  movement. Manual play confirms full forward with no run input still yields
   a walk — so magnitude alone never causes running, and a single full-forward
   value plus button control is sufficient. **There is no walk/run magnitude
   tuning surface in this design.**
@@ -131,7 +138,7 @@ Therefore:
 - Honor `invertYaxis` when deriving forward sign.
 - The stream already provides `sprintActive`, computed by the device against its
   own threshold. Feed that into the state machine as a first-class input rather
-  than only re-deriving sprint from `joystickValue` — then apply our own
+  than only re-deriving run intent from `joystickValue` — then apply our own
   hysteresis on top for stability.
 
 ## Empirical Findings (from `captures/rr-api-test.csv`, 1068 samples)
@@ -179,19 +186,19 @@ reproduce treadmill speed variation — both moving states emit the same constan
 forward value. This analysis is retained to explain the *existing* behavior, not
 to drive our output. Resolving it is optional curiosity, not a blocker.
 
-**The device's sprint flag chatters and needs hysteresis.** `sprint_active` fired
+**The device's run signal chatters and needs hysteresis.** `sprint_active` fired
 on 215/1068 samples across 10 transitions. During ramp-up it produced four
-spurious blips of 62–124 ms before the genuine 12.96 s sprint (which was itself
-clean). Observed sprint at `-22561` against `sprintThreshold=22301` confirms the
-device derives sprint from magnitude ≥ threshold.
+spurious blips of 62–124 ms before the genuine 12.96 s run (which was itself
+clean). Observed run at `-22561` against `sprintThreshold=22301` confirms the
+device derives its run signal from magnitude ≥ threshold.
 
 Consequences:
 
-- On `Toggle` sprint mode those four blips would each flip sprint on/off,
+- On `Toggle` device mode those four blips would each flip run on/off,
   leaving it in an unpredictable state. Our mod should implement **hold**
   semantics itself regardless of the device's configured mode.
-- Requiring ~200–250 ms of continuous `sprintActive` to enter Sprinting rejects
-  all four blips (each ≤124 ms) and would have produced one clean sprint from
+- Requiring ~200–250 ms of continuous `sprintActive` to enter Running rejects
+  all four blips (each ≤124 ms) and would have produced one clean run from
   this capture instead of five events.
 
 Derived defaults:
@@ -199,8 +206,8 @@ Derived defaults:
 ```ini
 CoastMaxSeconds=0.25
 StaleTimeoutMs=450
-SprintEnterSeconds=0.22
-SprintExitSeconds=0.35
+RunEnterSeconds=0.22
+RunExitSeconds=0.35
 ```
 
 ## Proposed Runtime Design
@@ -210,9 +217,9 @@ RealityRunner hardware
   -> USB serial COM API  (background reader thread)
   -> thread-safe snapshot {joystickValue, sprintActive, timestampMs}
   -> locomotion intent state machine   (evaluated on the game frame hook)
-  -> InputMux contribution (left stick + sprint button)
+  -> InputMux contribution (left stick + run button)
   -> mux owner's single XInput hook
-  -> Skyrim VR sees left stick forward and sprint
+  -> Skyrim VR sees left stick forward and run
 ```
 
 ## Main Components
@@ -257,15 +264,15 @@ Initial states:
 
 - `Stopped`
 - `Walking`
-- `Sprinting`
+- `Running`
 
 Initial rules:
 
 - start walking after movement above deadzone for a short confirmation window
 - stop walking only after no movement for a hold/release delay
-- start sprinting after sustained sprint indication (device `sprintActive`
-  and/or value above sprint threshold)
-- stop sprinting only after sustained absence of that indication
+- start running after sustained run indication (device `sprintActive`
+  and/or value above run threshold)
+- stop running only after sustained absence of that indication
 - keep walking through short zero-value dropouts, **bounded** by
   `CoastMaxSeconds` (see Failure Behavior)
 
@@ -314,7 +321,7 @@ mods use, reading the thread-safe snapshot. This matters for three reasons:
 
 #### Output Semantics
 
-**[resolved] Sprint goes through a synthetic button, and this is confirmed
+**[resolved] Run goes through a synthetic button, and this is confirmed
 working.** Two facts settle it:
 
 1. Per the vendor's sensor-calibration tutorial, RealityRunner sprint is
@@ -324,26 +331,26 @@ working.** Two facts settle it:
    `Toggle` ("press the SprintButton once whenever the Sprint threshold is
    reached").
 2. User-confirmed behavior: on the treadmill with the RR desktop app running,
-   **sprinting happens automatically with no grip squeeze**. That proves the
-   app's Sprint Button already reaches Skyrim's Sprint action in this MGO/VRIK
+   **running happens automatically with no grip squeeze**. That proves the
+   app's Sprint Button already reaches Skyrim's run action in this MGO/VRIK
    profile without any VR-controller input.
 
-So sprint is reproducible by pressing a button in the mux `buttons` field. The
+So running is reproducible by pressing a button in the mux `buttons` field. The
 user's separate "left grip while pushing the thumbstick" is a parallel VRIK/MGO
 binding for manual play; it is unaffected by this mod and keeps working.
 
-**This makes sprint parity, not polish.** We take over COM4, so the desktop app
-must be closed and its automatic sprint disappears with it. If we emit only the
-forward stick, the user *loses* automatic sprinting versus their current setup.
+**This makes run parity, not polish.** We take over COM4, so the desktop app
+must be closed and its automatic running disappears with it. If we emit only the
+forward stick, the user *loses* automatic running versus their current setup.
 
 **[resolved] The button is `LB` / `XINPUT_GAMEPAD_LEFT_SHOULDER` (`0x0100`)**,
-observed in `joy.cpl` on the app's virtual pad and proven to drive sprint in this
+observed in `joy.cpl` on the app's virtual pad and proven to drive run in this
 MGO/VRIK profile — it is what the working setup uses today. See "The sprint
 button is LB" below for how the app gates it and why we do not copy that gating.
 (Earlier guess of `LEFT_THUMB`/L3 was wrong.)
 
 Implement **hold** semantics ourselves — hold the button while the debounced
-sprint state is active — regardless of the device's configured `sprintmode`.
+run state is active — regardless of the device's configured `sprintmode`.
 Copying `Toggle` would inherit the chatter problem documented above.
 
 ### The core requirement (user-stated, and it drives everything)
@@ -351,14 +358,14 @@ Copying `Toggle` would inherit the chatter problem documented above.
 > The treadmill should send exactly the signals the player would send by hand.
 > Walking on the treadmill at *any* speed below a threshold = pushing the left
 > thumbstick forward (Skyrim walk). Walking *above* that threshold, however far
-> above, = thumbstick forward + grip (Skyrim sprint). Treadmill speed only
+> above, = thumbstick forward + grip (Skyrim run). Treadmill speed only
 > selects between the two. It never modulates anything.
 
 This is a two-state emulation of manual input, not a speed translation.
 
 **Consequence: there is no magnitude tuning surface.** Both moving states send
 the *same* stick value — full forward, exactly as a thumb would — and the only
-difference between them is whether the sprint button is held.
+difference between them is whether the run button is held.
 
 ```ini
 [Output]
@@ -367,11 +374,11 @@ ForwardMagnitude=1.0
 
 State to output:
 
-| State | Left stick Y | Sprint button |
+| State | Left stick Y | Run button |
 | --- | --- | --- |
 | `Stopped` | neutral | released |
 | `Walking` | `ForwardMagnitude` (full forward) | released |
-| `Sprinting` | `ForwardMagnitude` (full forward) | **held** |
+| `Running` | `ForwardMagnitude` (full forward) | **held** |
 
 Full deflection trivially clears Skyrim's controller deadzone, so
 HeadDirectedTurning's `MinimumStickOutput` concern does not apply here.
@@ -383,7 +390,7 @@ It also makes the "is Skyrim's speed magnitude-sensitive or binary?" question
 moot: we always send the same value the player would send by hand, so whichever
 is true, the result matches manual play by construction.
 
-The walk/sprint selector is already solved by the device: `sprintActive`, derived
+The walk/run selector is already solved by the device: `sprintActive`, derived
 from the device's `sprintThreshold` (tunable on the device itself), with our
 hysteresis on top.
 
@@ -416,7 +423,7 @@ ViGEm.** Evidence from the local install and machine:
   machine, alongside phantom `Xbox 360 Controller for Windows` device entries
   (registered, not present while the app is closed).
 - User-confirmed behavior: treadmill walking moves the character and crossing
-  the sprint threshold makes them run, with **no thumbstick and no grip
+  the run threshold makes them run, with **no thumbstick and no grip
   pressed** — i.e. something else is pressing them.
 
 So the existing chain is:
@@ -425,14 +432,14 @@ So the existing chain is:
 magnets -> serial (joystickValue, sprintActive)
   -> RealityRunner.exe
   -> ViGEmBus virtual Xbox 360 pad
-  -> left stick Y = curve-mapped speed; sprint button held when sprintActive
+  -> left stick Y = curve-mapped speed; run button held when sprintActive
   -> Skyrim VR reads it as an ordinary gamepad
 ```
 
 Consequences:
 
-- **Sprint is an XInput button.** It is replicable by us through the mux
-  `buttons` field. The VR-controller scenario that would have broken the sprint
+- **Run is an XInput button in this profile.** It is replicable by us through the mux
+  `buttons` field. The VR-controller scenario that would have broken the run
   design is ruled out.
 - **This mod replaces a driver-based virtual pad with an in-process XInput
   hook** — same channel Skyrim already reads (HeadDirectedTurning proved it in
@@ -445,35 +452,35 @@ Consequences:
   in-VR overlay rather than game input, given the ViGEm evidence — the XInput
   logging experiment will confirm outright.
 
-### The sprint button is LB — and how the app gates it
+### The run button is LB — and how the app gates it
 
 Observed directly in `joy.cpl` against the app's virtual pad: **only button 5
 lights up — `LB` / `XINPUT_GAMEPAD_LEFT_SHOULDER` (`0x0100`)** — and the Y axis
 climbs smoothly with treadmill speed.
 
 The surprise is that **LB is held down the entire time the user is moving**, not
-only above the sprint threshold. So the app does not use the button as the
-sprint trigger; it holds the button permanently and lets the *Y magnitude* gate
-whether Skyrim actually engages sprint.
+only above the run threshold. So the app does not use the button as the run
+trigger; it holds the button permanently and lets the *Y magnitude* gate
+whether Skyrim actually engages run.
 
-That works because Skyrim's sprint requires **both** a sprint input and
+That works because Skyrim's run requires **both** a run input and
 sufficient forward movement. The full picture, reconciling treadmill behavior
 with the user's manual play:
 
-| Situation | Forward | Sprint button | Result |
+| Situation | Forward | Run button | Result |
 | --- | --- | --- | --- |
 | Manual thumbstick | full | released | walk |
-| Manual thumbstick + grip | full | held | sprint |
-| Treadmill, slow | low Y | LB held | walk (sprint blocked by weak input) |
-| Treadmill, fast | high Y | LB held | sprint |
+| Manual thumbstick + grip | full | held | run |
+| Treadmill, slow | low Y | LB held | walk (run blocked by weak input) |
+| Treadmill, fast | high Y | LB held | run |
 
-**Decisive consequence:** manual play proves that *full* forward with no sprint
+**Decisive consequence:** manual play proves that *full* forward with no run
 input still yields a walk. Therefore magnitude alone never causes running, and
 we do not need to reproduce the app's magnitude gating. We control the button
 directly, so we can be explicit rather than rely on that workaround:
 
-- `Walking` -> full forward, sprint button **released**
-- `Sprinting` -> full forward, sprint button **held**
+- `Walking` -> full forward, run button **released**
+- `Running` -> full forward, run button **held**
 
 This is why the single `ForwardMagnitude` in Output Semantics is correct and why
 the walk/run magnitude threshold question is genuinely moot for this design.
@@ -501,9 +508,9 @@ different paths.
 The mux/coexistence and serial questions are resolved above. What genuinely
 remains:
 
-- ~~Which XInput button is sprint?~~ **Answered:** `LB` /
+- ~~Which XInput button is run?~~ **Answered:** `LB` /
   `XINPUT_GAMEPAD_LEFT_SHOULDER` (`0x0100`), observed on the app's virtual pad.
-- Is Skyrim's non-sprint gait at full forward the pace the user wants for
+- Is Skyrim's non-run gait at full forward the pace the user wants for
   treadmill walking? Manual play says yes (full stick alone = walk), but confirm
   on the first output build.
 - ~~Where does Skyrim VR's walk/run magnitude threshold sit?~~ **Moot.** The
@@ -534,12 +541,12 @@ Log CSV fields:
 - timestamp
 - raw API payload
 - joystick value
-- sprint active (device)
+- run signal (device `sprintActive`)
 - frame age / staleness
 - state
 - state transition reason
 - intended stick output
-- intended sprint output
+- intended run output
 
 ## 2026-07-18 Acquisition Correction
 

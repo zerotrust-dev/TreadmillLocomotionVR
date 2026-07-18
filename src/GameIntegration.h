@@ -26,7 +26,7 @@ namespace TLV
 
         REL::Relocation<PlayerUpdate*> originalPlayerUpdate_;
         IntentState lastIntentState_{ IntentState::stopped };
-        double sprintCancelSecondsRemaining_{ 0.0 };
+        double runCancelSecondsRemaining_{ 0.0 };
         bool initialized_{ false };
     };
 }

@@ -8,10 +8,10 @@ Int _presetGentleOID
 Int _presetBalancedOID
 Int _presetFastOID
 Int _deadzoneOID
-Int _sprintThresholdOID
-Int _sprintEnterOID
-Int _sprintExitOID
-Int _sprintCancelOID
+Int _runThresholdOID
+Int _runEnterOID
+Int _runExitOID
+Int _runCancelOID
 Int _coastOID
 Int _forwardMagnitudeOID
 Int _directApiOID
@@ -25,10 +25,10 @@ Bool _telemetry
 Bool _debugLogging
 
 Float _deadzone
-Float _sprintThreshold
-Float _sprintEnter
-Float _sprintExit
-Float _sprintCancel
+Float _runThreshold
+Float _runEnter
+Float _runExit
+Float _runCancel
 Float _coast
 Float _forwardMagnitude
 
@@ -69,23 +69,23 @@ Event OnOptionHighlight(Int option)
 	If option == _enabledOID
 		SetInfoText("Turns treadmill locomotion on or off. Leave on for normal play.")
 	ElseIf option == _outputOID
-		SetInfoText("Sends left-stick forward and sprint input to Skyrim. Turn off to log without moving.")
+		SetInfoText("Sends walk/run movement input to Skyrim. Turn off to log without moving.")
 	ElseIf option == _presetGentleOID
-		SetInfoText("Easier sprint trigger. Useful while learning the treadmill or walking carefully.")
+		SetInfoText("Easier run trigger. Useful while learning the treadmill or walking carefully.")
 	ElseIf option == _presetBalancedOID
 		SetInfoText("Recommended starting point for testing.")
 	ElseIf option == _presetFastOID
-		SetInfoText("Requires a stronger treadmill signal before sprinting.")
+		SetInfoText("Requires a stronger treadmill signal before running.")
 	ElseIf option == _deadzoneOID
 		SetInfoText("Minimum treadmill signal that counts as movement. Raise if tiny accidental movement starts walking.")
-	ElseIf option == _sprintThresholdOID
-		SetInfoText("Treadmill signal needed to sprint. This is owned by the mod, not the RealityRunner desktop curve.")
-	ElseIf option == _sprintEnterOID
-		SetInfoText("How long the sprint signal must be present before sprint starts. Lower reacts faster.")
-	ElseIf option == _sprintExitOID
-		SetInfoText("How long sprint can be absent before returning to walking. Raise if sprint flickers.")
-	ElseIf option == _sprintCancelOID
-		SetInfoText("Briefly releases forward after sprint ends so Skyrim stops sprinting before normal walking resumes.")
+	ElseIf option == _runThresholdOID
+		SetInfoText("Treadmill signal needed to run. This is owned by the mod, not the RealityRunner desktop curve.")
+	ElseIf option == _runEnterOID
+		SetInfoText("How long the run signal must be present before running starts. Lower reacts faster.")
+	ElseIf option == _runExitOID
+		SetInfoText("How long run can be absent before returning to walking. Raise if run flickers.")
+	ElseIf option == _runCancelOID
+		SetInfoText("Briefly releases forward after running ends so Skyrim stops running before normal walking resumes.")
 	ElseIf option == _coastOID
 		SetInfoText("How long walking continues over brief missing samples. Raise slightly if movement stutters.")
 	ElseIf option == _forwardMagnitudeOID
@@ -137,14 +137,14 @@ EndEvent
 Event OnOptionSliderOpen(Int option)
 	If option == _deadzoneOID
 		OpenSlider(_deadzone, 0.08, 0.02, 0.30, 0.01)
-	ElseIf option == _sprintThresholdOID
-		OpenSlider(_sprintThreshold, 0.75, 0.30, 1.00, 0.01)
-	ElseIf option == _sprintEnterOID
-		OpenSlider(_sprintEnter, 0.22, 0.00, 0.80, 0.01)
-	ElseIf option == _sprintExitOID
-		OpenSlider(_sprintExit, 0.35, 0.00, 1.00, 0.01)
-	ElseIf option == _sprintCancelOID
-		OpenSlider(_sprintCancel, 0.12, 0.00, 0.50, 0.01)
+	ElseIf option == _runThresholdOID
+		OpenSlider(_runThreshold, 0.75, 0.30, 1.00, 0.01)
+	ElseIf option == _runEnterOID
+		OpenSlider(_runEnter, 0.22, 0.00, 0.80, 0.01)
+	ElseIf option == _runExitOID
+		OpenSlider(_runExit, 0.35, 0.00, 1.00, 0.01)
+	ElseIf option == _runCancelOID
+		OpenSlider(_runCancel, 0.12, 0.00, 0.50, 0.01)
 	ElseIf option == _coastOID
 		OpenSlider(_coast, 0.25, 0.00, 1.00, 0.01)
 	ElseIf option == _forwardMagnitudeOID
@@ -157,21 +157,21 @@ Event OnOptionSliderAccept(Int option, Float value)
 		_deadzone = value
 		TreadmillLocomotionVR.SetFloatSetting("Deadzone", value)
 		SetSliderOptionValue(option, value, "{2}")
-	ElseIf option == _sprintThresholdOID
-		_sprintThreshold = value
-		TreadmillLocomotionVR.SetFloatSetting("SprintThreshold", value)
+	ElseIf option == _runThresholdOID
+		_runThreshold = value
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", value)
 		SetSliderOptionValue(option, value, "{2}")
-	ElseIf option == _sprintEnterOID
-		_sprintEnter = value
-		TreadmillLocomotionVR.SetFloatSetting("SprintEnterSeconds", value)
+	ElseIf option == _runEnterOID
+		_runEnter = value
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", value)
 		SetSliderOptionValue(option, value, "{2} s")
-	ElseIf option == _sprintExitOID
-		_sprintExit = value
-		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", value)
+	ElseIf option == _runExitOID
+		_runExit = value
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", value)
 		SetSliderOptionValue(option, value, "{2} s")
-	ElseIf option == _sprintCancelOID
-		_sprintCancel = value
-		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", value)
+	ElseIf option == _runCancelOID
+		_runCancel = value
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", value)
 		SetSliderOptionValue(option, value, "{2} s")
 	ElseIf option == _coastOID
 		_coast = value
@@ -193,16 +193,16 @@ Function DrawTuning()
 	AddTextOption("Native plugin", TreadmillLocomotionVR.GetPluginVersion())
 
 	AddHeaderOption("Presets")
-	_presetGentleOID = AddTextOption("Apply Gentle", "Easy sprint")
+	_presetGentleOID = AddTextOption("Apply Gentle", "Easy run")
 	_presetBalancedOID = AddTextOption("Apply Balanced", "Recommended")
-	_presetFastOID = AddTextOption("Apply Fast", "Harder sprint")
+	_presetFastOID = AddTextOption("Apply Fast", "Harder run")
 
 	AddHeaderOption("Most useful tuning")
 	_deadzoneOID = AddSliderOption("Movement deadzone", _deadzone, "{2}")
-	_sprintThresholdOID = AddSliderOption("Sprint threshold", _sprintThreshold, "{2}")
-	_sprintEnterOID = AddSliderOption("Sprint start delay", _sprintEnter, "{2} s")
-	_sprintExitOID = AddSliderOption("Sprint release delay", _sprintExit, "{2} s")
-	_sprintCancelOID = AddSliderOption("Sprint cancel pulse", _sprintCancel, "{2} s")
+	_runThresholdOID = AddSliderOption("Run threshold", _runThreshold, "{2}")
+	_runEnterOID = AddSliderOption("Run start delay", _runEnter, "{2} s")
+	_runExitOID = AddSliderOption("Run release delay", _runExit, "{2} s")
+	_runCancelOID = AddSliderOption("Run cancel pulse", _runCancel, "{2} s")
 EndFunction
 
 Function DrawDiagnostics()
@@ -224,10 +224,10 @@ Function LoadSettings()
 	_debugLogging = TreadmillLocomotionVR.GetBoolSetting("DebugLogging")
 
 	_deadzone = TreadmillLocomotionVR.GetFloatSetting("Deadzone")
-	_sprintThreshold = TreadmillLocomotionVR.GetFloatSetting("SprintThreshold")
-	_sprintEnter = TreadmillLocomotionVR.GetFloatSetting("SprintEnterSeconds")
-	_sprintExit = TreadmillLocomotionVR.GetFloatSetting("SprintExitSeconds")
-	_sprintCancel = TreadmillLocomotionVR.GetFloatSetting("SprintCancelSeconds")
+	_runThreshold = TreadmillLocomotionVR.GetFloatSetting("RunThreshold")
+	_runEnter = TreadmillLocomotionVR.GetFloatSetting("RunEnterSeconds")
+	_runExit = TreadmillLocomotionVR.GetFloatSetting("RunExitSeconds")
+	_runCancel = TreadmillLocomotionVR.GetFloatSetting("RunCancelSeconds")
 	_coast = TreadmillLocomotionVR.GetFloatSetting("CoastMaxSeconds")
 	_forwardMagnitude = TreadmillLocomotionVR.GetFloatSetting("ForwardMagnitude")
 EndFunction
@@ -247,22 +247,22 @@ Function ApplyPreset(Int preset)
 	TreadmillLocomotionVR.SetFloatSetting("ForwardMagnitude", 1.00)
 
 	If preset == 0
-		TreadmillLocomotionVR.SetFloatSetting("SprintThreshold", 0.60)
-		TreadmillLocomotionVR.SetFloatSetting("SprintEnterSeconds", 0.12)
-		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", 0.45)
-		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", 0.12)
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.60)
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.12)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.45)
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.12)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.30)
 	ElseIf preset == 1
-		TreadmillLocomotionVR.SetFloatSetting("SprintThreshold", 0.75)
-		TreadmillLocomotionVR.SetFloatSetting("SprintEnterSeconds", 0.22)
-		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", 0.35)
-		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", 0.12)
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.75)
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.22)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.35)
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.12)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.25)
 	ElseIf preset == 2
-		TreadmillLocomotionVR.SetFloatSetting("SprintThreshold", 0.85)
-		TreadmillLocomotionVR.SetFloatSetting("SprintEnterSeconds", 0.25)
-		TreadmillLocomotionVR.SetFloatSetting("SprintExitSeconds", 0.30)
-		TreadmillLocomotionVR.SetFloatSetting("SprintCancelSeconds", 0.10)
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.85)
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.25)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.30)
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.10)
 		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.20)
 	EndIf
 

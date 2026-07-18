@@ -108,16 +108,28 @@ namespace TLV
             ReadUInt(ini, "Intent", "StaleTimeoutMs", staleTimeoutMs_),
             100,
             5000);
-        sprintEnterSeconds_ = std::clamp(
-            ReadDouble(ini, "Intent", "SprintEnterSeconds", sprintEnterSeconds_),
+        runEnterSeconds_ = std::clamp(
+            ReadDouble(
+                ini,
+                "Intent",
+                "RunEnterSeconds",
+                ReadDouble(ini, "Intent", "SprintEnterSeconds", runEnterSeconds_)),
             0.0,
             2.0);
-        sprintExitSeconds_ = std::clamp(
-            ReadDouble(ini, "Intent", "SprintExitSeconds", sprintExitSeconds_),
+        runExitSeconds_ = std::clamp(
+            ReadDouble(
+                ini,
+                "Intent",
+                "RunExitSeconds",
+                ReadDouble(ini, "Intent", "SprintExitSeconds", runExitSeconds_)),
             0.0,
             2.0);
-        sprintCancelSeconds_ = std::clamp(
-            ReadDouble(ini, "Intent", "SprintCancelSeconds", sprintCancelSeconds_),
+        runCancelSeconds_ = std::clamp(
+            ReadDouble(
+                ini,
+                "Intent",
+                "RunCancelSeconds",
+                ReadDouble(ini, "Intent", "SprintCancelSeconds", runCancelSeconds_)),
             0.0,
             0.50);
         if (coastMaxSeconds_ * 1000.0 >= static_cast<double>(staleTimeoutMs_)) {
@@ -132,8 +144,12 @@ namespace TLV
             ReadFloat(ini, "Analysis", "Deadzone", analysis_.deadzone),
             0.0F,
             0.50F);
-        analysis_.sprintThreshold = std::clamp(
-            ReadFloat(ini, "Analysis", "SprintThreshold", analysis_.sprintThreshold),
+        analysis_.runThreshold = std::clamp(
+            ReadFloat(
+                ini,
+                "Analysis",
+                "RunThreshold",
+                ReadFloat(ini, "Analysis", "SprintThreshold", analysis_.runThreshold)),
             analysis_.deadzone,
             1.0F);
 
@@ -148,7 +164,7 @@ namespace TLV
             userIndex_);
         logger::info(
             "directApi={} comPort={} apiPollMs={} enableOutput={} forwardMagnitude={:.3f} "
-            "coast={:.3f}s stale={}ms sprintEnter={:.3f}s sprintExit={:.3f}s sprintCancel={:.3f}s",
+            "coast={:.3f}s stale={}ms runEnter={:.3f}s runExit={:.3f}s runCancel={:.3f}s",
             directApiEnabled_,
             comPort_,
             apiPollMs_,
@@ -156,9 +172,9 @@ namespace TLV
             forwardMagnitude_,
             coastMaxSeconds_,
             staleTimeoutMs_,
-            sprintEnterSeconds_,
-            sprintExitSeconds_,
-            sprintCancelSeconds_);
+            runEnterSeconds_,
+            runExitSeconds_,
+            runCancelSeconds_);
     }
 
     bool Settings::Save() const
@@ -179,12 +195,12 @@ namespace TLV
 
         WriteDouble(ini, "Intent", "CoastMaxSeconds", coastMaxSeconds_);
         ini.SetLongValue("Intent", "StaleTimeoutMs", staleTimeoutMs_);
-        WriteDouble(ini, "Intent", "SprintEnterSeconds", sprintEnterSeconds_);
-        WriteDouble(ini, "Intent", "SprintExitSeconds", sprintExitSeconds_);
-        WriteDouble(ini, "Intent", "SprintCancelSeconds", sprintCancelSeconds_);
+        WriteDouble(ini, "Intent", "RunEnterSeconds", runEnterSeconds_);
+        WriteDouble(ini, "Intent", "RunExitSeconds", runExitSeconds_);
+        WriteDouble(ini, "Intent", "RunCancelSeconds", runCancelSeconds_);
 
         WriteFloat(ini, "Analysis", "Deadzone", analysis_.deadzone);
-        WriteFloat(ini, "Analysis", "SprintThreshold", analysis_.sprintThreshold);
+        WriteFloat(ini, "Analysis", "RunThreshold", analysis_.runThreshold);
 
         if (ini.SaveFile(settingsPath) < 0) {
             logger::error("Could not save {}", "TreadmillLocomotionVR.ini");
@@ -220,8 +236,8 @@ namespace TLV
         if (name == "Deadzone") {
             return analysis_.deadzone;
         }
-        if (name == "SprintThreshold") {
-            return analysis_.sprintThreshold;
+        if (name == "RunThreshold" || name == "SprintThreshold") {
+            return analysis_.runThreshold;
         }
         if (name == "ForwardMagnitude") {
             return forwardMagnitude_;
@@ -232,14 +248,14 @@ namespace TLV
         if (name == "StaleTimeoutMs") {
             return static_cast<float>(staleTimeoutMs_);
         }
-        if (name == "SprintEnterSeconds") {
-            return static_cast<float>(sprintEnterSeconds_);
+        if (name == "RunEnterSeconds" || name == "SprintEnterSeconds") {
+            return static_cast<float>(runEnterSeconds_);
         }
-        if (name == "SprintExitSeconds") {
-            return static_cast<float>(sprintExitSeconds_);
+        if (name == "RunExitSeconds" || name == "SprintExitSeconds") {
+            return static_cast<float>(runExitSeconds_);
         }
-        if (name == "SprintCancelSeconds") {
-            return static_cast<float>(sprintCancelSeconds_);
+        if (name == "RunCancelSeconds" || name == "SprintCancelSeconds") {
+            return static_cast<float>(runCancelSeconds_);
         }
         return 0.0F;
     }
@@ -273,11 +289,11 @@ namespace TLV
     {
         if (name == "Deadzone") {
             analysis_.deadzone = std::clamp(value, 0.0F, 0.50F);
-            analysis_.sprintThreshold = (std::max)(analysis_.sprintThreshold, analysis_.deadzone);
+            analysis_.runThreshold = (std::max)(analysis_.runThreshold, analysis_.deadzone);
             return true;
         }
-        if (name == "SprintThreshold") {
-            analysis_.sprintThreshold = std::clamp(value, analysis_.deadzone, 1.0F);
+        if (name == "RunThreshold" || name == "SprintThreshold") {
+            analysis_.runThreshold = std::clamp(value, analysis_.deadzone, 1.0F);
             return true;
         }
         if (name == "ForwardMagnitude") {
@@ -295,16 +311,16 @@ namespace TLV
                 5000);
             return true;
         }
-        if (name == "SprintEnterSeconds") {
-            sprintEnterSeconds_ = std::clamp<double>(value, 0.0, 2.0);
+        if (name == "RunEnterSeconds" || name == "SprintEnterSeconds") {
+            runEnterSeconds_ = std::clamp<double>(value, 0.0, 2.0);
             return true;
         }
-        if (name == "SprintExitSeconds") {
-            sprintExitSeconds_ = std::clamp<double>(value, 0.0, 2.0);
+        if (name == "RunExitSeconds" || name == "SprintExitSeconds") {
+            runExitSeconds_ = std::clamp<double>(value, 0.0, 2.0);
             return true;
         }
-        if (name == "SprintCancelSeconds") {
-            sprintCancelSeconds_ = std::clamp<double>(value, 0.0, 0.50);
+        if (name == "RunCancelSeconds" || name == "SprintCancelSeconds") {
+            runCancelSeconds_ = std::clamp<double>(value, 0.0, 0.50);
             return true;
         }
         return false;
@@ -325,7 +341,7 @@ namespace TLV
     float Settings::ForwardMagnitude() const { return forwardMagnitude_; }
     double Settings::CoastMaxSeconds() const { return coastMaxSeconds_; }
     std::uint32_t Settings::StaleTimeoutMs() const { return staleTimeoutMs_; }
-    double Settings::SprintEnterSeconds() const { return sprintEnterSeconds_; }
-    double Settings::SprintExitSeconds() const { return sprintExitSeconds_; }
-    double Settings::SprintCancelSeconds() const { return sprintCancelSeconds_; }
+    double Settings::RunEnterSeconds() const { return runEnterSeconds_; }
+    double Settings::RunExitSeconds() const { return runExitSeconds_; }
+    double Settings::RunCancelSeconds() const { return runCancelSeconds_; }
 }

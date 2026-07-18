@@ -21,8 +21,8 @@ namespace TLV
         if (forward < settings.deadzone) {
             return LocomotionBand::idle;
         }
-        if (forward >= settings.sprintThreshold) {
-            return LocomotionBand::sprint;
+        if (forward >= settings.runThreshold) {
+            return LocomotionBand::run;
         }
         return LocomotionBand::walk;
     }
@@ -34,8 +34,8 @@ namespace TLV
             return "idle";
         case LocomotionBand::walk:
             return "walk";
-        case LocomotionBand::sprint:
-            return "sprint";
+        case LocomotionBand::run:
+            return "run";
         default:
             return "unknown";
         }

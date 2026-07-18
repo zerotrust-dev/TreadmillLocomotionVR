@@ -66,7 +66,7 @@ namespace TLV
             !settings.DirectApiEnabled() ||
             !settings.EnableOutput()) {
             output.SetLocomotion(0, 0);
-            sprintCancelSecondsRemaining_ = 0.0;
+            runCancelSecondsRemaining_ = 0.0;
             lastIntentState_ = IntentState::stopped;
             return true;
         }
@@ -101,7 +101,7 @@ namespace TLV
         const auto& settings = Settings::GetSingleton();
         if (!settings.Enabled() || !settings.DirectApiEnabled()) {
             XInputLocomotionOutput::GetSingleton().SetLocomotion(0, 0);
-            sprintCancelSecondsRemaining_ = 0.0;
+            runCancelSecondsRemaining_ = 0.0;
             lastIntentState_ = IntentState::stopped;
             return;
         }
@@ -113,22 +113,22 @@ namespace TLV
             curve,
             deltaSeconds);
 
-        if (lastIntentState_ == IntentState::sprinting &&
+        if (lastIntentState_ == IntentState::running &&
             output.state == IntentState::walking &&
-            settings.SprintCancelSeconds() > 0.0) {
-            sprintCancelSecondsRemaining_ = settings.SprintCancelSeconds();
+            settings.RunCancelSeconds() > 0.0) {
+            runCancelSecondsRemaining_ = settings.RunCancelSeconds();
         }
         lastIntentState_ = output.state;
 
         if (output.state != IntentState::walking) {
-            sprintCancelSecondsRemaining_ = 0.0;
-        } else if (sprintCancelSecondsRemaining_ > 0.0) {
-            output.reason = "sprint-cancel";
+            runCancelSecondsRemaining_ = 0.0;
+        } else if (runCancelSecondsRemaining_ > 0.0) {
+            output.reason = "run-cancel";
             output.intendedLeftY = 0;
             output.intendedButtons = 0;
-            sprintCancelSecondsRemaining_ = (std::max)(
+            runCancelSecondsRemaining_ = (std::max)(
                 0.0,
-                sprintCancelSecondsRemaining_ -
+                runCancelSecondsRemaining_ -
                     static_cast<double>((std::max)(0.0F, deltaSeconds)));
         }
 
@@ -140,13 +140,13 @@ namespace TLV
             output.sampleSequence != 0 &&
             (output.sampleSequence % 60) == 0) {
             logger::debug(
-                "intent seq={} age={} stale={} value={} deviceSprint={} state={} "
+                "intent seq={} age={} stale={} value={} deviceRunSignal={} state={} "
                 "leftY={} buttons=0x{:04x}",
                 output.sampleSequence,
                 output.frameAgeMs,
                 output.stale,
                 output.joystickValue,
-                output.deviceSprintActive,
+                output.deviceRunSignal,
                 IntentStateName(output.state),
                 output.intendedLeftY,
                 output.intendedButtons);

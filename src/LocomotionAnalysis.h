@@ -8,13 +8,13 @@ namespace TLV
     {
         idle,
         walk,
-        sprint
+        run
     };
 
     struct AnalysisSettings
     {
         float deadzone{ 0.08F };
-        float sprintThreshold{ 0.75F };
+        float runThreshold{ 0.75F };
     };
 
     [[nodiscard]] float NormalizeStick(std::int16_t value);

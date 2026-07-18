@@ -20,7 +20,7 @@ int main()
     assert(ClassifyForwardSpeed(0.07F, settings) == LocomotionBand::idle);
     assert(ClassifyForwardSpeed(0.08F, settings) == LocomotionBand::walk);
     assert(ClassifyForwardSpeed(0.55F, settings) == LocomotionBand::walk);
-    assert(ClassifyForwardSpeed(0.75F, settings) == LocomotionBand::sprint);
+    assert(ClassifyForwardSpeed(0.75F, settings) == LocomotionBand::run);
     assert(ClassifyForwardSpeed(-0.80F, settings) == LocomotionBand::idle);
 
     return 0;

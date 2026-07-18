@@ -34,7 +34,7 @@ namespace TLV
 
         stream_
             << "time_s,tick_ms,sample_sequence,frame_age_ms,stale,"
-            << "joystick_value,device_sprint,state,reason,"
+            << "joystick_value,device_run_signal,state,reason,"
             << "intended_left_y,intended_buttons\n";
         logger::info("Intent telemetry CSV opened: {}", path->string());
         return true;
@@ -58,7 +58,7 @@ namespace TLV
             << output.frameAgeMs << ','
             << (output.stale ? 1 : 0) << ','
             << output.joystickValue << ','
-            << (output.deviceSprintActive ? 1 : 0) << ','
+            << (output.deviceRunSignal ? 1 : 0) << ','
             << IntentStateName(output.state) << ','
             << output.reason << ','
             << output.intendedLeftY << ','

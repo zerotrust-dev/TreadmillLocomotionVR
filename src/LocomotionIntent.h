@@ -8,7 +8,7 @@ namespace TLV
     {
         stopped,
         walking,
-        sprinting
+        running
     };
 
     struct IntentOutput
@@ -19,7 +19,7 @@ namespace TLV
         std::uint64_t sampleSequence{ 0 };
         std::uint32_t frameAgeMs{ 0 };
         int joystickValue{ 0 };
-        bool deviceSprintActive{ false };
+        bool deviceRunSignal{ false };
         bool stale{ true };
         std::int16_t intendedLeftY{ 0 };
         std::uint16_t intendedButtons{ 0 };
@@ -43,8 +43,8 @@ namespace TLV
 
         IntentState state_{ IntentState::stopped };
         double noMovementSeconds_{ 0.0 };
-        double sprintPresentSeconds_{ 0.0 };
-        double sprintAbsentSeconds_{ 0.0 };
+        double runPresentSeconds_{ 0.0 };
+        double runAbsentSeconds_{ 0.0 };
         std::uint64_t lastSequence_{ 0 };
     };
 }
