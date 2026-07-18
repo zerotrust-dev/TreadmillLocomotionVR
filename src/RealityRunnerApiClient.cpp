@@ -357,20 +357,21 @@ namespace TLV
             return;
         }
         if (auto curve = ParseCurve(*curvePayload)) {
+            const auto& parsedCurve = *curve;
             std::scoped_lock lock(mutex_);
-            curve_ = *curve;
+            curve_ = parsedCurve;
             logger::info(
                 "RealityRunner curve name={} deadzone={} sprintThreshold={} "
                 "invertY={} y=[{},{},{},{},{}]",
-                curve_->name,
-                curve_->deadzone,
-                curve_->sprintThreshold,
-                curve_->invertYaxis,
-                curve_->y1,
-                curve_->y2,
-                curve_->y3,
-                curve_->y4,
-                curve_->y5);
+                parsedCurve.name,
+                parsedCurve.deadzone,
+                parsedCurve.sprintThreshold,
+                parsedCurve.invertYaxis,
+                parsedCurve.y1,
+                parsedCurve.y2,
+                parsedCurve.y3,
+                parsedCurve.y4,
+                parsedCurve.y5);
         } else {
             logger::warn("RealityRunner curve parse failed: {}", *curvePayload);
         }
