@@ -102,13 +102,30 @@ it from the game frame hook does this naturally.
 "not walking"; sustained movement was a single unbroken 341-sample (~21 s) burst.
 So `CoastMaxSeconds = 0.25` comfortably covers real dropouts.
 
-**The likely cause of the in-game choppiness is magnitude oscillation, not
-dropouts.** During continuous walking the value swings between `-18334` and
-`-30495` — 56% to 93% of full scale — 16 times a second. Skyrim's walk-vs-run
-split is driven by stick *magnitude*, so a value oscillating across that
-threshold makes the player flicker between walking and running. This is the
-strongest argument for emitting a **fixed magnitude per state**: the win is not
-smoothing dropouts, it is stopping the walk/run oscillation.
+**Cause of the in-game choppiness — two competing hypotheses, unresolved.**
+During continuous movement the value swings between `-18334` and `-30495` — 56%
+to 93% of full scale — 16 times a second.
+
+- *Magnitude-oscillation hypothesis:* if Skyrim's forward speed varies with
+  stick magnitude, that swing produces continuous speed variation.
+- *Duty-cycle (PWM) hypothesis (user observation, and the stronger one):* the
+  user reports that holding the thumbstick forward yields **one constant speed**
+  regardless of deflection, and that a slow treadmill walk moved them *slower*
+  than that. If speed is magnitude-insensitive, the only way the device can
+  render a slower walk is by pulsing the stick on/off, which is felt directly as
+  choppiness. This contradicts the magnitude hypothesis.
+
+**This capture cannot decide between them.** All 716 zero samples are accounted
+for by three long idle runs (713) plus two brief dropouts (3); the movement is a
+single unbroken 341-sample burst. There is no sustained on/off pulsing anywhere
+in the file, so it was recorded at a pace where no slowdown was needed. A capture
+taken while deliberately walking *very slowly* would confirm or kill the PWM
+hypothesis outright.
+
+**Neither answer changes the design.** Per the core requirement above, we never
+reproduce treadmill speed variation — both moving states emit the same constant
+forward value. This analysis is retained to explain the *existing* behavior, not
+to drive our output. Resolving it is optional curiosity, not a blocker.
 
 **The device's sprint flag chatters and needs hysteresis.** `sprint_active` fired
 on 215/1068 samples across 10 transitions. During ramp-up it produced four
@@ -280,26 +297,46 @@ Implement **hold** semantics ourselves — hold the button while the debounced
 sprint state is active — regardless of the device's configured `sprintmode`.
 Copying `Toggle` would inherit the chatter problem documented above.
 
-**[correction] Skyrim's gamepad locomotion has three tiers, not two.** Walk vs
-run is driven by *stick magnitude*; sprint is a separate button. So expose:
+### The core requirement (user-stated, and it drives everything)
+
+> The treadmill should send exactly the signals the player would send by hand.
+> Walking on the treadmill at *any* speed below a threshold = pushing the left
+> thumbstick forward (Skyrim walk). Walking *above* that threshold, however far
+> above, = thumbstick forward + grip (Skyrim sprint). Treadmill speed only
+> selects between the two. It never modulates anything.
+
+This is a two-state emulation of manual input, not a speed translation.
+
+**Consequence: there is no magnitude tuning surface.** Both moving states send
+the *same* stick value — full forward, exactly as a thumb would — and the only
+difference between them is whether the sprint button is held.
 
 ```ini
 [Output]
-WalkStickMagnitude=0.5
-RunStickMagnitude=1.0
-SprintUsesButton=true
+ForwardMagnitude=1.0
 ```
-
-That lets the user match whatever MGO actually does, and collapse to two tiers
-by setting both magnitudes equal. As with HeadDirectedTurning's
-`MinimumStickOutput`, the walking value **must clear Skyrim's controller
-deadzone** or it will read as no input at all.
 
 State to output:
 
-- `Stopped`: left stick neutral, sprint released
-- `Walking`: stable left stick forward at `WalkStickMagnitude`
-- `Sprinting`: stable left stick forward at `RunStickMagnitude` + sprint held
+| State | Left stick Y | Sprint button |
+| --- | --- | --- |
+| `Stopped` | neutral | released |
+| `Walking` | `ForwardMagnitude` (full forward) | released |
+| `Sprinting` | `ForwardMagnitude` (full forward) | **held** |
+
+Full deflection trivially clears Skyrim's controller deadzone, so
+HeadDirectedTurning's `MinimumStickOutput` concern does not apply here.
+
+**This design is deliberately immune to the choppiness debate below.** Whether
+RealityRunner was pulsing the stick or swinging its magnitude, we never pass
+treadmill speed variation into the game at all — we replace it with a constant.
+It also makes the "is Skyrim's speed magnitude-sensitive or binary?" question
+moot: we always send the same value the player would send by hand, so whichever
+is true, the result matches manual play by construction.
+
+The walk/sprint selector is already solved by the device: `sprintActive`, derived
+from the device's `sprintThreshold` (tunable on the device itself), with our
+hysteresis on top.
 
 ## Failure Behavior (new section — treat as a hard requirement)
 
@@ -356,9 +393,10 @@ remains:
 - Which specific button index does `sprintButton` hold, and which XInput button
   does it correspond to? (Sprint via synthetic button is proven; only the
   identity is open — see Output Semantics.)
-- Does Skyrim VR's walk/run magnitude split behave the same under MGO as in flat
-  Skyrim, and where is its threshold? This sets `WalkStickMagnitude`, and the
-  captured 56%–93% oscillation suggests the threshold sits inside that band.
+- ~~Where does Skyrim VR's walk/run magnitude threshold sit?~~ **Moot.** The
+  two-state design always emits full forward, so magnitude behavior cannot
+  affect us. (Optional curiosity: which choppiness hypothesis was correct — see
+  Empirical Findings. Not a blocker.)
 - Does the treadmill expose a second joystick path to Windows (see Environment
   Interaction)?
 - How should the state machine treat reverse/backward, given the curve's
