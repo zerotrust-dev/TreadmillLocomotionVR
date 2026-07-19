@@ -33,7 +33,7 @@ Float _coast
 Float _forwardMagnitude
 
 Int Function GetVersion()
-	Return 1
+	Return 2
 EndFunction
 
 Event OnConfigInit()
