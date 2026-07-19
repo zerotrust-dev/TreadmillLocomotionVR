@@ -108,17 +108,25 @@ That is not how the transport works:
 - Wire framing is `NNN:<payload>\n` where `NNN` is a **zero-padded 3-digit ASCII
   byte count** of the payload (max 999), followed by `:`, the payload, and a
   trailing newline.
-- `SET stream true,WIRED` is a **one-shot enable**. After it succeeds the device
-  **pushes** joystick frames continuously. We do not poll — the reader thread
-  simply blocks on frame reads. This answers the "is polling fast enough"
-  question: there is no polling.
+- **[corrected 2026-07-19]** `SET stream true,WIRED` is **not** a one-shot
+  "start pushing" enable. Despite its name it is a **request/response command
+  that returns exactly one joystick frame**, so the reader must **poll** — send
+  it, read one frame, sleep, repeat. Ground truth is the vendor's own demo:
+  `get_joystick_data()` in `realityrunner_api_demo.py` re-sends
+  `pack_set_stream(True, "WIRED")` for *every* sample.
+  An earlier revision of this document claimed the device pushes continuously.
+  That was wrong, and implementing it (enable once, then only read) blocked the
+  reader thread forever and silently killed all locomotion — the device never
+  sends unprompted. Do not "optimise" the poll back into a stream.
+- Because each poll is a command, `SendCommand`'s leading
+  `PurgeComm(PURGE_RXCLEAR)` is correct and necessary here, not a bug.
 - A streamed joystick payload is `<joystickValue>,<sprintActive>`.
 - **Do every `GET` before enabling the stream.** The reference transport's
   `send()` flushes the input buffer, writes, then reads the *next* frame as the
   response. With a stream already running, that next frame is very likely a
   joystick frame, not the command reply. Command/stream interleaving is racy —
   so the startup order must be: connect → drain → `GET curve` / `GET profiles` /
-  `GET bootmode` → `SET stream true,WIRED` → read-only loop.
+  `GET bootmode` → then the `SET stream true,WIRED` poll loop.
 - Serial params: 115200 8N1, no flow control. Opening the port may assert DTR
   and reset the device, so allow ~250 ms settle and drain before the first
   command (the Python `connect()` does exactly this).
@@ -234,7 +242,8 @@ Responsibilities:
 - open serial port at `115200`, 8N1, settle + drain
 - send `GET curve`, `GET profiles`, `GET bootmode` at startup — **before** the
   stream is enabled — and log them; adopt curve values as defaults
-- enable streaming once via `SET stream true,WIRED`, then read frames only
+- poll `SET stream true,WIRED` on an interval (`ApiPollMs`); each send returns
+  one joystick frame — it is not a push stream (see Protocol Facts)
 - parse `NNN:<payload>\n` frames; resync by flushing on a bad header
 - expose latest `joystickValue,sprintActive` **plus a receive timestamp** in a
   thread-safe snapshot
