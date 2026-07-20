@@ -10,3 +10,18 @@ The native DLL exposes a small Papyrus API for the SkyUI VR MCM:
 
 The native DLL remains authoritative and writes
 `Data\SKSE\Plugins\TreadmillLocomotionVR.ini`.
+
+## SkyUI compile stub
+
+The local `Scripts/Source/Stubs/SKI_ConfigBase.psc` is a build-critical file.
+Keep it aligned with the known-working TiptoeToJumpVR stub or the real SkyUI
+API signatures. A bad stub can still compile and still receive `OnPageReset`,
+but the in-game MCM body can render blank.
+
+The issue was proven in TreadmillLocomotionVR: logs showed the page draw
+function ran, but no options appeared until the stub was fixed to match SkyUI's
+option signatures, optional `flags` / `noUpdate` parameters, and
+`TOP_TO_BOTTOM = 2`.
+
+After changing MCM scripts, bump `GetVersion()` so SkyUI refreshes cached menu
+state on existing saves.

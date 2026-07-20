@@ -76,6 +76,7 @@ namespace
         logger::info("Settings applied through Papyrus API; success={}", applied);
         return applied;
     }
+
 }
 
 namespace TLV::PapyrusApi

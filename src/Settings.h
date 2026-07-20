@@ -21,6 +21,7 @@ namespace TLV
         [[nodiscard]] bool Enabled() const;
         [[nodiscard]] bool Telemetry() const;
         [[nodiscard]] bool DebugLogging() const;
+        [[nodiscard]] bool PauseInMenus() const;
         [[nodiscard]] bool PatchXInput() const;
         [[nodiscard]] bool LogOnly() const;
         [[nodiscard]] bool LogAllUsers() const;
@@ -39,8 +40,9 @@ namespace TLV
 
     private:
         bool enabled_{ false };
-        bool telemetry_{ true };
+        bool telemetry_{ false };
         bool debugLogging_{ false };
+        bool pauseInMenus_{ true };
         bool patchXInput_{ true };
         bool logOnly_{ true };
         bool logAllUsers_{ true };

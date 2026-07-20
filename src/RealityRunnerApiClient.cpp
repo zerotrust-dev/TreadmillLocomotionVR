@@ -392,25 +392,46 @@ namespace TLV
             logger::warn("RealityRunner boot mode read failed");
         }
 
+        // `SET stream true,WIRED` is NOT a one-shot "start pushing" enable: it is
+        // a request/response command that returns exactly one joystick frame.
+        // The vendor's own demo re-sends it for every sample
+        // (`get_joystick_data` in realityrunner_api_demo.py), so this must be a
+        // poll. Sending it once and then only reading blocks forever, because
+        // the device never pushes unprompted.
         const auto pollMs = Settings::GetSingleton().ApiPollMs();
         logger::info(
             "RealityRunner joystick polling started intervalMs={}",
             pollMs);
+
+        constexpr std::uint32_t maximumConsecutivePollFaults = 50;
+        std::uint32_t consecutivePollFaults = 0;
         while (!stopRequested_.load(std::memory_order_relaxed)) {
             const auto payload =
                 SendCommand(handle.value, "SET stream true,WIRED\n", stopRequested_);
             if (!payload) {
-                if (!stopRequested_.load(std::memory_order_relaxed)) {
-                    logger::warn("RealityRunner joystick poll failed; stopping reader");
+                if (stopRequested_.load(std::memory_order_relaxed)) {
+                    break;
                 }
-                break;
-            }
-            const auto joystick = ParseJoystick(*payload);
-            if (!joystick) {
-                logger::debug("Ignoring non-joystick poll payload: {}", *payload);
+                if (++consecutivePollFaults >= maximumConsecutivePollFaults) {
+                    logger::warn(
+                        "RealityRunner poll hit {} consecutive faults; stopping reader",
+                        consecutivePollFaults);
+                    break;
+                }
+                Sleep(pollMs);
                 continue;
             }
-            Publish(joystick->first, joystick->second, *payload);
+            consecutivePollFaults = 0;
+
+            if (const auto joystick = ParseJoystick(*payload); joystick) {
+                Publish(joystick->first, joystick->second, *payload);
+            } else {
+                logger::debug("Ignoring non-joystick poll payload: {}", *payload);
+            }
+
+            // Pace every path, including unparseable payloads. The original
+            // loop's `continue` skipped the sleep, so a run of non-joystick
+            // replies could spin the port at full speed.
             Sleep(pollMs);
         }
 

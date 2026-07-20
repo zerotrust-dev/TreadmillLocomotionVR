@@ -33,7 +33,7 @@ Float _coast
 Float _forwardMagnitude
 
 Int Function GetVersion()
-	Return 1
+	Return 6
 EndFunction
 
 Event OnConfigInit()
@@ -93,7 +93,7 @@ Event OnOptionHighlight(Int option)
 	ElseIf option == _directApiOID
 		SetInfoText("Reads RealityRunner directly from COM4. Close the RealityRunner desktop app before enabling this.")
 	ElseIf option == _telemetryOID
-		SetInfoText("Writes intent CSV in the SKSE log folder. Keep on while tuning.")
+		SetInfoText("Writes intent CSV in the SKSE log folder. Use only while tuning; keep off for normal play.")
 	ElseIf option == _debugLoggingOID
 		SetInfoText("Writes extra debug log details. Leave off unless troubleshooting.")
 	EndIf
