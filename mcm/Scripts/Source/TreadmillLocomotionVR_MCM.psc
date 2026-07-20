@@ -3,107 +3,102 @@ ScriptName TreadmillLocomotionVR_MCM Extends SKI_ConfigBase
 Int Property ExpectedNativeApiVersion = 1 AutoReadOnly
 
 Int _enabledOID
-Int _jumpOutputOID
+Int _outputOID
 Int _presetGentleOID
 Int _presetBalancedOID
-Int _presetAthleticOID
-Int _riseThresholdOID
-Int _upwardVelocityOID
-Int _cooldownOID
-Int _triggerOnRiseOID
-Int _fallThresholdOID
-Int _jumpPulseOID
-Int _rightStickYOID
+Int _presetFastOID
+Int _deadzoneOID
+Int _runThresholdOID
+Int _runEnterOID
+Int _runExitOID
+Int _runCancelOID
+Int _coastOID
+Int _forwardMagnitudeOID
+Int _directApiOID
 Int _telemetryOID
 Int _debugLoggingOID
 
 Bool _enabled
-Bool _jumpOutput
-Bool _triggerOnRise
+Bool _output
+Bool _directApi
 Bool _telemetry
 Bool _debugLogging
 
-Float _riseThreshold
-Float _fallThreshold
-Float _upwardVelocity
-Float _cooldown
-Float _jumpPulse
-Float _rightStickY
+Float _deadzone
+Float _runThreshold
+Float _runEnter
+Float _runExit
+Float _runCancel
+Float _coast
+Float _forwardMagnitude
 
 Int Function GetVersion()
-	Return 4
+	Return 5
 EndFunction
 
 Event OnConfigInit()
-	TreadmillLocomotionVR.LogMcmEvent("OnConfigInit")
+	TreadmillLocomotionVR.LogMcmEvent("OnConfigInit v5")
 	ModName = "Treadmill Locomotion VR"
 	Pages = New String[2]
-	Pages[0] = "Quick Setup"
-	Pages[1] = "Advanced"
+	Pages[0] = "Tuning"
+	Pages[1] = "Diagnostics"
 EndEvent
 
 Event OnConfigOpen()
-	TreadmillLocomotionVR.LogMcmEvent("OnConfigOpen")
+	TreadmillLocomotionVR.LogMcmEvent("OnConfigOpen v5")
 	If TreadmillLocomotionVR.GetNativeApiVersion() != ExpectedNativeApiVersion
 		Debug.Notification("Treadmill Locomotion VR MCM/API version mismatch")
 	EndIf
+	LoadSettings()
 EndEvent
 
 Event OnConfigClose()
-	TreadmillLocomotionVR.LogMcmEvent("OnConfigClose")
 	SaveAndApply()
 EndEvent
 
 Event OnPageReset(String page)
-	TreadmillLocomotionVR.LogMcmEvent("OnPageReset start page=" + page)
+	TreadmillLocomotionVR.LogMcmEvent("OnPageReset v5 page=" + page)
+	LoadSettings()
 	SetCursorFillMode(TOP_TO_BOTTOM)
 
-	If page == "" || page == "Quick Setup"
-		DrawDiagnosticPage()
-	ElseIf page == "Advanced"
-		DrawDiagnosticPage()
+	If page == "" || page == "Tuning"
+		DrawTuning()
+	ElseIf page == "Diagnostics"
+		DrawDiagnostics()
 	EndIf
-	TreadmillLocomotionVR.LogMcmEvent("OnPageReset end page=" + page)
 EndEvent
-
-Function DrawDiagnosticPage()
-	TreadmillLocomotionVR.LogMcmEvent("DrawDiagnosticPage start")
-	AddHeaderOption("Treadmill MCM Diagnostic")
-	AddTextOption("Body rendered", "yes")
-	AddTextOption("Script version", "4")
-	AddTextOption("Native plugin", TreadmillLocomotionVR.GetPluginVersion())
-	TreadmillLocomotionVR.LogMcmEvent("DrawDiagnosticPage end")
-EndFunction
 
 Event OnOptionHighlight(Int option)
 	If option == _enabledOID
-		SetInfoText("Turns the gesture detector on or off. Leave enabled for normal play.")
-	ElseIf option == _jumpOutputOID
-		SetInfoText("Sends the jump input when the gesture is detected. Turn this off to log/test without jumping.")
+		SetInfoText("Turns treadmill locomotion on or off. Leave on for normal play.")
+	ElseIf option == _outputOID
+		SetInfoText("Sends walk/run movement input to Skyrim. Turn off to log without moving.")
 	ElseIf option == _presetGentleOID
-		SetInfoText("Easier for slower or smaller movements. Use this if you do not want to push hard with your legs.")
+		SetInfoText("Easier run trigger. Useful while learning the treadmill or walking carefully.")
 	ElseIf option == _presetBalancedOID
-		SetInfoText("Recommended setup from testing. Good first choice for most users.")
-	ElseIf option == _presetAthleticOID
-		SetInfoText("Requires a quicker upward push. Use this if slow standing up causes unwanted jumps.")
-	ElseIf option == _riseThresholdOID
-		SetInfoText("How much your headset must rise before a jump can start. Lower is more sensitive; higher requires a bigger motion.")
-	ElseIf option == _upwardVelocityOID
-		SetInfoText("How fast you must move upward. Lower helps older or slower users; higher rejects slow standing up.")
-	ElseIf option == _cooldownOID
-		SetInfoText("Minimum time between jumps. Raise this if one movement sometimes jumps twice.")
-	ElseIf option == _triggerOnRiseOID
-		SetInfoText("Jumps as soon as the upward push is detected. Recommended because it feels responsive.")
-	ElseIf option == _fallThresholdOID
-		SetInfoText("How much you must settle back down for the full gesture to be confirmed in telemetry.")
-	ElseIf option == _jumpPulseOID
-		SetInfoText("How long the virtual right-stick-up jump input is held. Increase only if Skyrim misses jumps.")
-	ElseIf option == _rightStickYOID
-		SetInfoText("Strength of virtual right-stick-up. Leave at 1.00 unless debugging input.")
+		SetInfoText("Recommended starting point for testing.")
+	ElseIf option == _presetFastOID
+		SetInfoText("Requires a stronger treadmill signal before running.")
+	ElseIf option == _deadzoneOID
+		SetInfoText("Minimum treadmill signal that counts as movement. Raise if tiny accidental movement starts walking.")
+	ElseIf option == _runThresholdOID
+		SetInfoText("Treadmill signal needed to run. This is owned by the mod, not the RealityRunner desktop curve.")
+	ElseIf option == _runEnterOID
+		SetInfoText("How long the run signal must be present before running starts. Lower reacts faster.")
+	ElseIf option == _runExitOID
+		SetInfoText("How long run can be absent before returning to walking. Raise if run flickers.")
+	ElseIf option == _runCancelOID
+		SetInfoText("Briefly releases forward after running ends so Skyrim stops running before normal walking resumes.")
+	ElseIf option == _coastOID
+		SetInfoText("How long walking continues over brief missing samples. Raise slightly if movement stutters.")
+	ElseIf option == _forwardMagnitudeOID
+		SetInfoText("Strength of virtual left-stick-forward. Leave at 1.00 unless debugging.")
+	ElseIf option == _directApiOID
+		SetInfoText("Reads RealityRunner directly from COM4. Close the RealityRunner desktop app before enabling this.")
 	ElseIf option == _telemetryOID
-		SetInfoText("Writes a CSV in the SKSE log folder for tuning. Useful during testing, off for normal play.")
+		SetInfoText("Writes intent CSV in the SKSE log folder. Keep on while tuning.")
 	ElseIf option == _debugLoggingOID
-		SetInfoText("Writes extra debug details. Leave off unless troubleshooting.")
+		SetInfoText("Writes extra debug log details. Leave off unless troubleshooting.")
 	EndIf
 EndEvent
 
@@ -113,26 +108,26 @@ Event OnOptionSelect(Int option)
 		TreadmillLocomotionVR.SetBoolSetting("Enabled", _enabled)
 		SetToggleOptionValue(option, _enabled)
 		SaveAndApply()
-	ElseIf option == _jumpOutputOID
-		_jumpOutput = !_jumpOutput
-		TreadmillLocomotionVR.SetBoolSetting("JumpOutput", _jumpOutput)
-		SetToggleOptionValue(option, _jumpOutput)
+	ElseIf option == _outputOID
+		_output = !_output
+		TreadmillLocomotionVR.SetBoolSetting("EnableOutput", _output)
+		SetToggleOptionValue(option, _output)
 		SaveAndApply()
 	ElseIf option == _presetGentleOID
 		ApplyPreset(0)
 	ElseIf option == _presetBalancedOID
 		ApplyPreset(1)
-	ElseIf option == _presetAthleticOID
+	ElseIf option == _presetFastOID
 		ApplyPreset(2)
-	ElseIf option == _triggerOnRiseOID
-		_triggerOnRise = !_triggerOnRise
-		TreadmillLocomotionVR.SetBoolSetting("TriggerOnRise", _triggerOnRise)
-		SetToggleOptionValue(option, _triggerOnRise)
-		SaveAndApply()
 	ElseIf option == _telemetryOID
 		_telemetry = !_telemetry
 		TreadmillLocomotionVR.SetBoolSetting("Telemetry", _telemetry)
 		SetToggleOptionValue(option, _telemetry)
+		SaveAndApply()
+	ElseIf option == _directApiOID
+		_directApi = !_directApi
+		TreadmillLocomotionVR.SetBoolSetting("DirectApiEnabled", _directApi)
+		SetToggleOptionValue(option, _directApi)
 		SaveAndApply()
 	ElseIf option == _debugLoggingOID
 		_debugLogging = !_debugLogging
@@ -143,95 +138,101 @@ Event OnOptionSelect(Int option)
 EndEvent
 
 Event OnOptionSliderOpen(Int option)
-	If option == _riseThresholdOID
-		OpenSlider(_riseThreshold, 0.040, 0.015, 0.120, 0.005)
-	ElseIf option == _upwardVelocityOID
-		OpenSlider(_upwardVelocity, 0.25, 0.05, 1.00, 0.05)
-	ElseIf option == _cooldownOID
-		OpenSlider(_cooldown, 0.70, 0.20, 2.00, 0.05)
-	ElseIf option == _fallThresholdOID
-		OpenSlider(_fallThreshold, 0.020, 0.010, 0.080, 0.005)
-	ElseIf option == _jumpPulseOID
-		OpenSlider(_jumpPulse, 0.12, 0.02, 0.50, 0.01)
-	ElseIf option == _rightStickYOID
-		OpenSlider(_rightStickY, 1.00, 0.25, 1.00, 0.05)
+	If option == _deadzoneOID
+		OpenSlider(_deadzone, 0.08, 0.02, 0.30, 0.01)
+	ElseIf option == _runThresholdOID
+		OpenSlider(_runThreshold, 0.75, 0.30, 1.00, 0.01)
+	ElseIf option == _runEnterOID
+		OpenSlider(_runEnter, 0.22, 0.00, 0.80, 0.01)
+	ElseIf option == _runExitOID
+		OpenSlider(_runExit, 0.35, 0.00, 1.00, 0.01)
+	ElseIf option == _runCancelOID
+		OpenSlider(_runCancel, 0.12, 0.00, 0.50, 0.01)
+	ElseIf option == _coastOID
+		OpenSlider(_coast, 0.25, 0.00, 1.00, 0.01)
+	ElseIf option == _forwardMagnitudeOID
+		OpenSlider(_forwardMagnitude, 1.00, 0.25, 1.00, 0.05)
 	EndIf
 EndEvent
 
 Event OnOptionSliderAccept(Int option, Float value)
-	If option == _riseThresholdOID
-		_riseThreshold = value
-		TreadmillLocomotionVR.SetFloatSetting("RiseThresholdMeters", value)
-		SetSliderOptionValue(option, value, "{3} m")
-	ElseIf option == _upwardVelocityOID
-		_upwardVelocity = value
-		TreadmillLocomotionVR.SetFloatSetting("MinUpwardVelocityMetersPerSecond", value)
-		SetSliderOptionValue(option, value, "{2} m/s")
-	ElseIf option == _cooldownOID
-		_cooldown = value
-		TreadmillLocomotionVR.SetFloatSetting("CooldownSeconds", value)
+	If option == _deadzoneOID
+		_deadzone = value
+		TreadmillLocomotionVR.SetFloatSetting("Deadzone", value)
+		SetSliderOptionValue(option, value, "{2}")
+	ElseIf option == _runThresholdOID
+		_runThreshold = value
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", value)
+		SetSliderOptionValue(option, value, "{2}")
+	ElseIf option == _runEnterOID
+		_runEnter = value
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", value)
 		SetSliderOptionValue(option, value, "{2} s")
-	ElseIf option == _fallThresholdOID
-		_fallThreshold = value
-		TreadmillLocomotionVR.SetFloatSetting("FallThresholdMeters", value)
-		SetSliderOptionValue(option, value, "{3} m")
-	ElseIf option == _jumpPulseOID
-		_jumpPulse = value
-		TreadmillLocomotionVR.SetFloatSetting("JumpPulseSeconds", value)
+	ElseIf option == _runExitOID
+		_runExit = value
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", value)
 		SetSliderOptionValue(option, value, "{2} s")
-	ElseIf option == _rightStickYOID
-		_rightStickY = value
-		TreadmillLocomotionVR.SetFloatSetting("RightStickY", value)
+	ElseIf option == _runCancelOID
+		_runCancel = value
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", value)
+		SetSliderOptionValue(option, value, "{2} s")
+	ElseIf option == _coastOID
+		_coast = value
+		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", value)
+		SetSliderOptionValue(option, value, "{2} s")
+	ElseIf option == _forwardMagnitudeOID
+		_forwardMagnitude = value
+		TreadmillLocomotionVR.SetFloatSetting("ForwardMagnitude", value)
 		SetSliderOptionValue(option, value, "{2}")
 	EndIf
 
 	SaveAndApply()
 EndEvent
 
-Function DrawQuickSetup()
+Function DrawTuning()
 	AddHeaderOption("Status")
-	_enabledOID = AddToggleOption("Tiptoe jump detection", _enabled)
-	_jumpOutputOID = AddToggleOption("Send jump input", _jumpOutput)
+	_enabledOID = AddToggleOption("Treadmill locomotion", _enabled)
+	_outputOID = AddToggleOption("Send movement input", _output)
 	AddTextOption("Native plugin", TreadmillLocomotionVR.GetPluginVersion())
 
 	AddHeaderOption("Presets")
-	_presetGentleOID = AddTextOption("Apply Gentle", "Slower")
+	_presetGentleOID = AddTextOption("Apply Gentle", "Easy run")
 	_presetBalancedOID = AddTextOption("Apply Balanced", "Recommended")
-	_presetAthleticOID = AddTextOption("Apply Athletic", "Quicker")
+	_presetFastOID = AddTextOption("Apply Fast", "Harder run")
 
 	AddHeaderOption("Most useful tuning")
-	_riseThresholdOID = AddSliderOption("Rise needed", _riseThreshold, "{3} m")
-	_upwardVelocityOID = AddSliderOption("Upward speed", _upwardVelocity, "{2} m/s")
-	_cooldownOID = AddSliderOption("Time between jumps", _cooldown, "{2} s")
+	_deadzoneOID = AddSliderOption("Movement deadzone", _deadzone, "{2}")
+	_runThresholdOID = AddSliderOption("Run threshold", _runThreshold, "{2}")
+	_runEnterOID = AddSliderOption("Run start delay", _runEnter, "{2} s")
+	_runExitOID = AddSliderOption("Run release delay", _runExit, "{2} s")
+	_runCancelOID = AddSliderOption("Run cancel pulse", _runCancel, "{2} s")
 EndFunction
 
-Function DrawAdvanced()
-	AddHeaderOption("Gesture")
-	_triggerOnRiseOID = AddToggleOption("Jump on upward push", _triggerOnRise)
-	_fallThresholdOID = AddSliderOption("Settle amount", _fallThreshold, "{3} m")
+Function DrawDiagnostics()
+	AddHeaderOption("Smoothing")
+	_coastOID = AddSliderOption("Movement coast", _coast, "{2} s")
+	_forwardMagnitudeOID = AddSliderOption("Stick strength", _forwardMagnitude, "{2}")
 
-	AddHeaderOption("Input")
-	_jumpPulseOID = AddSliderOption("Jump input hold time", _jumpPulse, "{2} s")
-	_rightStickYOID = AddSliderOption("Right-stick-up strength", _rightStickY, "{2}")
-
-	AddHeaderOption("Diagnostics")
+	AddHeaderOption("Logs")
+	_directApiOID = AddToggleOption("Direct RealityRunner API", _directApi)
 	_telemetryOID = AddToggleOption("Telemetry CSV", _telemetry)
 	_debugLoggingOID = AddToggleOption("Debug logging", _debugLogging)
 EndFunction
 
 Function LoadSettings()
 	_enabled = TreadmillLocomotionVR.GetBoolSetting("Enabled")
-	_jumpOutput = TreadmillLocomotionVR.GetBoolSetting("JumpOutput")
-	_triggerOnRise = TreadmillLocomotionVR.GetBoolSetting("TriggerOnRise")
+	_output = TreadmillLocomotionVR.GetBoolSetting("EnableOutput")
+	_directApi = TreadmillLocomotionVR.GetBoolSetting("DirectApiEnabled")
 	_telemetry = TreadmillLocomotionVR.GetBoolSetting("Telemetry")
 	_debugLogging = TreadmillLocomotionVR.GetBoolSetting("DebugLogging")
 
-	_riseThreshold = TreadmillLocomotionVR.GetFloatSetting("RiseThresholdMeters")
-	_fallThreshold = TreadmillLocomotionVR.GetFloatSetting("FallThresholdMeters")
-	_upwardVelocity = TreadmillLocomotionVR.GetFloatSetting("MinUpwardVelocityMetersPerSecond")
-	_cooldown = TreadmillLocomotionVR.GetFloatSetting("CooldownSeconds")
-	_jumpPulse = TreadmillLocomotionVR.GetFloatSetting("JumpPulseSeconds")
-	_rightStickY = TreadmillLocomotionVR.GetFloatSetting("RightStickY")
+	_deadzone = TreadmillLocomotionVR.GetFloatSetting("Deadzone")
+	_runThreshold = TreadmillLocomotionVR.GetFloatSetting("RunThreshold")
+	_runEnter = TreadmillLocomotionVR.GetFloatSetting("RunEnterSeconds")
+	_runExit = TreadmillLocomotionVR.GetFloatSetting("RunExitSeconds")
+	_runCancel = TreadmillLocomotionVR.GetFloatSetting("RunCancelSeconds")
+	_coast = TreadmillLocomotionVR.GetFloatSetting("CoastMaxSeconds")
+	_forwardMagnitude = TreadmillLocomotionVR.GetFloatSetting("ForwardMagnitude")
 EndFunction
 
 Function OpenSlider(Float currentValue, Float defaultValue, Float minValue, Float maxValue, Float interval)
@@ -241,30 +242,93 @@ Function OpenSlider(Float currentValue, Float defaultValue, Float minValue, Floa
 	SetSliderDialogInterval(interval)
 EndFunction
 
+Function SetEnabled(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("Enabled", value)
+	SaveAndApply()
+EndFunction
+
+Function SetOutput(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("EnableOutput", value)
+	SaveAndApply()
+EndFunction
+
+Function SetDirectApi(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("DirectApiEnabled", value)
+	SaveAndApply()
+EndFunction
+
+Function SetTelemetry(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("Telemetry", value)
+	SaveAndApply()
+EndFunction
+
+Function SetDebugLogging(Bool value)
+	TreadmillLocomotionVR.SetBoolSetting("DebugLogging", value)
+	SaveAndApply()
+EndFunction
+
+Function SetDeadzone(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("Deadzone", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunThreshold(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunThreshold", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunEnter(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunExit(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetRunCancel(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetCoast(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", value)
+	SaveAndApply()
+EndFunction
+
+Function SetForwardMagnitude(Float value)
+	TreadmillLocomotionVR.SetFloatSetting("ForwardMagnitude", value)
+	SaveAndApply()
+EndFunction
+
 Function ApplyPreset(Int preset)
 	TreadmillLocomotionVR.SetBoolSetting("Enabled", True)
-	TreadmillLocomotionVR.SetBoolSetting("JumpOutput", True)
-	TreadmillLocomotionVR.SetBoolSetting("TriggerOnRise", True)
+	TreadmillLocomotionVR.SetBoolSetting("DirectApiEnabled", True)
+	TreadmillLocomotionVR.SetBoolSetting("EnableOutput", True)
+	TreadmillLocomotionVR.SetFloatSetting("Deadzone", 0.08)
+	TreadmillLocomotionVR.SetFloatSetting("ForwardMagnitude", 1.00)
 
 	If preset == 0
-		TreadmillLocomotionVR.SetFloatSetting("RiseThresholdMeters", 0.030)
-		TreadmillLocomotionVR.SetFloatSetting("FallThresholdMeters", 0.015)
-		TreadmillLocomotionVR.SetFloatSetting("MinUpwardVelocityMetersPerSecond", 0.15)
-		TreadmillLocomotionVR.SetFloatSetting("CooldownSeconds", 0.80)
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.60)
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.12)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.70)
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.12)
+		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.30)
 	ElseIf preset == 1
-		TreadmillLocomotionVR.SetFloatSetting("RiseThresholdMeters", 0.040)
-		TreadmillLocomotionVR.SetFloatSetting("FallThresholdMeters", 0.020)
-		TreadmillLocomotionVR.SetFloatSetting("MinUpwardVelocityMetersPerSecond", 0.25)
-		TreadmillLocomotionVR.SetFloatSetting("CooldownSeconds", 0.70)
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.70)
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.22)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.60)
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.12)
+		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.25)
 	ElseIf preset == 2
-		TreadmillLocomotionVR.SetFloatSetting("RiseThresholdMeters", 0.045)
-		TreadmillLocomotionVR.SetFloatSetting("FallThresholdMeters", 0.020)
-		TreadmillLocomotionVR.SetFloatSetting("MinUpwardVelocityMetersPerSecond", 0.35)
-		TreadmillLocomotionVR.SetFloatSetting("CooldownSeconds", 0.60)
+		TreadmillLocomotionVR.SetFloatSetting("RunThreshold", 0.85)
+		TreadmillLocomotionVR.SetFloatSetting("RunEnterSeconds", 0.25)
+		TreadmillLocomotionVR.SetFloatSetting("RunExitSeconds", 0.30)
+		TreadmillLocomotionVR.SetFloatSetting("RunCancelSeconds", 0.10)
+		TreadmillLocomotionVR.SetFloatSetting("CoastMaxSeconds", 0.20)
 	EndIf
 
-	TreadmillLocomotionVR.SetFloatSetting("JumpPulseSeconds", 0.12)
-	TreadmillLocomotionVR.SetFloatSetting("RightStickY", 1.00)
 	SaveAndApply()
 	ForcePageReset()
 EndFunction
