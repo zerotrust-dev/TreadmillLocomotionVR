@@ -12,3 +12,4 @@ Bool Function SetFloatSetting(String name, Float value) Global Native
 Bool Function SaveSettings() Global Native
 Bool Function ReloadSettings() Global Native
 Bool Function ApplySettings() Global Native
+Bool Function LogMcmEvent(String message) Global Native

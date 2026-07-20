@@ -31,10 +31,11 @@ Float _jumpPulse
 Float _rightStickY
 
 Int Function GetVersion()
-	Return 3
+	Return 4
 EndFunction
 
 Event OnConfigInit()
+	TreadmillLocomotionVR.LogMcmEvent("OnConfigInit")
 	ModName = "Treadmill Locomotion VR"
 	Pages = New String[2]
 	Pages[0] = "Quick Setup"
@@ -42,26 +43,37 @@ Event OnConfigInit()
 EndEvent
 
 Event OnConfigOpen()
+	TreadmillLocomotionVR.LogMcmEvent("OnConfigOpen")
 	If TreadmillLocomotionVR.GetNativeApiVersion() != ExpectedNativeApiVersion
 		Debug.Notification("Treadmill Locomotion VR MCM/API version mismatch")
 	EndIf
-	LoadSettings()
 EndEvent
 
 Event OnConfigClose()
+	TreadmillLocomotionVR.LogMcmEvent("OnConfigClose")
 	SaveAndApply()
 EndEvent
 
 Event OnPageReset(String page)
-	LoadSettings()
+	TreadmillLocomotionVR.LogMcmEvent("OnPageReset start page=" + page)
 	SetCursorFillMode(TOP_TO_BOTTOM)
 
 	If page == "" || page == "Quick Setup"
-		DrawQuickSetup()
+		DrawDiagnosticPage()
 	ElseIf page == "Advanced"
-		DrawAdvanced()
+		DrawDiagnosticPage()
 	EndIf
+	TreadmillLocomotionVR.LogMcmEvent("OnPageReset end page=" + page)
 EndEvent
+
+Function DrawDiagnosticPage()
+	TreadmillLocomotionVR.LogMcmEvent("DrawDiagnosticPage start")
+	AddHeaderOption("Treadmill MCM Diagnostic")
+	AddTextOption("Body rendered", "yes")
+	AddTextOption("Script version", "4")
+	AddTextOption("Native plugin", TreadmillLocomotionVR.GetPluginVersion())
+	TreadmillLocomotionVR.LogMcmEvent("DrawDiagnosticPage end")
+EndFunction
 
 Event OnOptionHighlight(Int option)
 	If option == _enabledOID
