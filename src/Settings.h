@@ -40,7 +40,7 @@ namespace TLV
 
     private:
         bool enabled_{ false };
-        bool telemetry_{ true };
+        bool telemetry_{ false };
         bool debugLogging_{ false };
         bool pauseInMenus_{ true };
         bool patchXInput_{ true };

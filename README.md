@@ -8,7 +8,7 @@ Current test build:
 - Converts treadmill movement into two Skyrim states: walk and run.
 - Outputs left-stick-forward for walking.
 - Outputs left-stick-forward plus the gamepad run button for running.
-- Writes intent telemetry for tuning.
+- Can write intent telemetry for tuning, disabled by default.
 - Exposes tuning through SkyUI MCM.
 
 RealityRunner's API still uses field names such as `sprintActive` and
@@ -27,6 +27,8 @@ INI ships ready to test:
 ```ini
 [General]
 Enabled=true
+Telemetry=false
+DebugLogging=false
 
 [RealityRunner]
 DirectApiEnabled=true

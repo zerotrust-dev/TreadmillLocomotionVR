@@ -21,8 +21,8 @@ namespace
         auto log = std::make_shared<spdlog::logger>("global", std::move(sink));
 
         spdlog::set_default_logger(std::move(log));
-        spdlog::set_level(spdlog::level::debug);
-        spdlog::flush_on(spdlog::level::debug);
+        spdlog::set_level(spdlog::level::info);
+        spdlog::flush_on(spdlog::level::warn);
     }
 
     void OnSKSEMessage(SKSE::MessagingInterface::Message* message)

@@ -77,11 +77,6 @@ namespace
         return applied;
     }
 
-    bool LogMcmEvent(RE::StaticFunctionTag*, RE::BSFixedString message)
-    {
-        logger::info("MCM event: {}", ToString(message));
-        return true;
-    }
 }
 
 namespace TLV::PapyrusApi
@@ -97,7 +92,6 @@ namespace TLV::PapyrusApi
         vm->RegisterFunction("SaveSettings", scriptName, SaveSettings);
         vm->RegisterFunction("ReloadSettings", scriptName, ReloadSettings);
         vm->RegisterFunction("ApplySettings", scriptName, ApplySettings);
-        vm->RegisterFunction("LogMcmEvent", scriptName, LogMcmEvent);
 
         logger::info(
             "Registered Papyrus API {} version {}",

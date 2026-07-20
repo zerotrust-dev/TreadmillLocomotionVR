@@ -33,11 +33,10 @@ Float _coast
 Float _forwardMagnitude
 
 Int Function GetVersion()
-	Return 5
+	Return 6
 EndFunction
 
 Event OnConfigInit()
-	TreadmillLocomotionVR.LogMcmEvent("OnConfigInit v5")
 	ModName = "Treadmill Locomotion VR"
 	Pages = New String[2]
 	Pages[0] = "Tuning"
@@ -45,7 +44,6 @@ Event OnConfigInit()
 EndEvent
 
 Event OnConfigOpen()
-	TreadmillLocomotionVR.LogMcmEvent("OnConfigOpen v5")
 	If TreadmillLocomotionVR.GetNativeApiVersion() != ExpectedNativeApiVersion
 		Debug.Notification("Treadmill Locomotion VR MCM/API version mismatch")
 	EndIf
@@ -57,7 +55,6 @@ Event OnConfigClose()
 EndEvent
 
 Event OnPageReset(String page)
-	TreadmillLocomotionVR.LogMcmEvent("OnPageReset v5 page=" + page)
 	LoadSettings()
 	SetCursorFillMode(TOP_TO_BOTTOM)
 
@@ -96,7 +93,7 @@ Event OnOptionHighlight(Int option)
 	ElseIf option == _directApiOID
 		SetInfoText("Reads RealityRunner directly from COM4. Close the RealityRunner desktop app before enabling this.")
 	ElseIf option == _telemetryOID
-		SetInfoText("Writes intent CSV in the SKSE log folder. Keep on while tuning.")
+		SetInfoText("Writes intent CSV in the SKSE log folder. Use only while tuning; keep off for normal play.")
 	ElseIf option == _debugLoggingOID
 		SetInfoText("Writes extra debug log details. Leave off unless troubleshooting.")
 	EndIf
